@@ -1,0 +1,62 @@
+<div class="tools-layout">
+
+  <!-- Header Bar -->
+  <div class="tools-header glass-card">
+    <div class="header-left">
+      <span class="material-icons text-cyan">settings_input_component</span>
+      <span class="header-title">INFRASTRUCTURE TOOLS STATUS</span>
+    </div>
+    <div class="header-right">
+      @if (lastUpdated) {
+        <span class="last-updated text-secondary mono">Last Updated: {{ lastUpdated }}</span>
+      }
+      <button mat-flat-button class="btn-cyan" (click)="load()" [disabled]="loading">
+        @if (loading) { <mat-spinner diameter="18"></mat-spinner> }
+        @else { <mat-icon>refresh</mat-icon> }
+        REFRESH ALL
+      </button>
+    </div>
+  </div>
+
+  <!-- Tools Grid -->
+  <div class="tools-grid">
+    @for (tool of tools; track tool.name) {
+      <div class="tool-card glass-card" [class]="'status-border-' + tool.status.toLowerCase()">
+        <!-- Card Header -->
+        <div class="tool-header">
+          <div class="tool-icon">
+            <span class="material-icons">{{ tool.icon }}</span>
+          </div>
+          <div class="tool-info">
+            <div class="tool-name">{{ tool.name }}</div>
+            <div class="tool-role text-secondary">{{ tool.role }}</div>
+          </div>
+          <div class="tool-status-badge" [style.color]="getStatusColor(tool.status)" [style.border-color]="getStatusColor(tool.status) + '40'" [style.background]="getStatusColor(tool.status) + '15'">
+            <div class="status-dot" [style.background]="getStatusColor(tool.status)" [class.pulse-online]="tool.status === 'ONLINE'"></div>
+            {{ tool.status }}
+          </div>
+        </div>
+
+        <!-- Network -->
+        <div class="tool-network">
+          <span class="material-icons" style="font-size:12px">dns</span>
+          <span class="mono" style="font-size:11px">{{ tool.network }}</span>
+          @if (tool.ip && tool.ip !== 'Distributed') {
+            <span class="mono text-secondary" style="font-size:10px"> · {{ tool.ip }}</span>
+          }
+        </div>
+
+        <!-- Metrics -->
+        <div class="tool-metrics">
+          @for (metric of tool.metrics; track metric.label) {
+            <div class="metric-item">
+              <span class="metric-label text-secondary">{{ metric.label }}</span>
+              <span class="metric-value mono">{{ metric.value }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+</div>

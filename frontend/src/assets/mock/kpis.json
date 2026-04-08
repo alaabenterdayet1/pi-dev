@@ -1,0 +1,28 @@
+{
+  "mttd": 4.2,
+  "mttr": 11.3,
+  "falsePositiveRate": 5,
+  "criticalAssetProtectionRate": 98,
+  "automationRatio": 80,
+  "mttdSparkline": [5.1, 4.8, 4.5, 4.9, 4.1, 4.3, 4.2],
+  "mttrSparkline": [14.2, 13.1, 12.5, 11.8, 12.2, 11.5, 11.3],
+  "mttdTrend": "down",
+  "mttrTrend": "down",
+  "fpTrend": "down",
+  "protectionTrend": "up",
+  "threatDistribution": {
+    "donut": [
+      { "label": "Ransomware", "value": 35 },
+      { "label": "Exfiltration", "value": 22 },
+      { "label": "Credentials", "value": 18 },
+      { "label": "Port Scan", "value": 15 },
+      { "label": "Other", "value": 10 }
+    ],
+    "bySeverity": [
+      { "severity": "CRITICAL", "count": 3 },
+      { "severity": "HIGH", "count": 8 },
+      { "severity": "MEDIUM", "count": 14 },
+      { "severity": "LOW", "count": 22 }
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+.ai-scoring-layout { display: flex; flex-direction: column; gap: 16px; }
+
+/* ─── Headers ────────────────────────────────────────────────────────────── */
+.card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.card-title { font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700; color: #64748B; letter-spacing: 0.12em; text-transform: uppercase; }
+
+/* ─── Simulator ──────────────────────────────────────────────────────────── */
+.simulator-card { padding: 20px; }
+.simulator-form { display: flex; flex-direction: column; gap: 16px; }
+.form-row { display: flex; gap: 16px; }
+.form-group { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; color: #64748B; letter-spacing: 0.1em; text-transform: uppercase; }
+.toggle-group { justify-content: center; }
+.severity-slider { width: 100%; }
+.calc-btn { height: 44px; font-size: 14px; letter-spacing: 0.12em; display: flex; align-items: center; gap: 8px; align-self: flex-start; padding: 0 24px; }
+
+/* ─── Result Panel ───────────────────────────────────────────────────────── */
+.result-panel { display: flex; gap: 24px; align-items: flex-start; margin-top: 20px; padding-top: 20px; border-top: 1px solid #1E2D4E; }
+.result-gauge { flex: 0 0 200px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.result-decision { font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700; padding: 6px 16px; border-radius: 8px; }
+.decision-isolate { color: #FF4560; background: rgba(255,69,96,0.1); border: 1px solid rgba(255,69,96,0.3); }
+.decision-escalate { color: #FF8C00; background: rgba(255,140,0,0.1); border: 1px solid rgba(255,140,0,0.3); }
+.decision-monitor { color: #00E396; background: rgba(0,227,150,0.1); border: 1px solid rgba(0,227,150,0.3); }
+.result-conf { font-size: 12px; }
+.result-features { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.features-title { font-family: 'Rajdhani', sans-serif; font-size: 11px; color: #64748B; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+.feature-row { display: flex; align-items: center; gap: 10px; }
+.feature-name { font-size: 12px; min-width: 110px; }
+.feature-bar-bg { flex: 1; height: 5px; background: #1E2D4E; border-radius: 3px; overflow: hidden; }
+.feature-bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.feature-pts { font-size: 12px; min-width: 36px; text-align: right; }
+
+/* ─── Charts Row ─────────────────────────────────────────────────────────── */
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.chart-card { padding: 16px; }
+
+/* ─── Metrics Row ────────────────────────────────────────────────────────── */
+.metrics-row { display: grid; grid-template-columns: 1fr 1fr 1fr 2fr; gap: 14px; }
+.metric-card { padding: 16px; }
+.metric-value { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700; margin-bottom: 4px; }
+.metric-label { font-family: 'Rajdhani', sans-serif; font-size: 11px; color: #64748B; letter-spacing: 0.1em; text-transform: uppercase; }
+.feature-importance { display: flex; flex-direction: column; }
+.fi-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.fi-name { font-size: 11px; min-width: 100px; }
+.fi-pct { font-size: 11px; min-width: 35px; text-align: right; }

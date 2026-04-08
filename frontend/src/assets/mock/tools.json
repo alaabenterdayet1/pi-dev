@@ -1,0 +1,106 @@
+[
+  {
+    "name": "The Hive",
+    "role": "Incident Response Platform",
+    "network": "SOC",
+    "ip": "192.168.10.5",
+    "status": "ONLINE",
+    "icon": "bug_report",
+    "metrics": [
+      { "label": "Open Cases", "value": "12" },
+      { "label": "Cases Today", "value": "4" },
+      { "label": "Avg Resolution", "value": "2.3h" }
+    ]
+  },
+  {
+    "name": "MISP",
+    "role": "Threat Intelligence Platform",
+    "network": "SOC",
+    "ip": "192.168.10.10",
+    "status": "ONLINE",
+    "icon": "share",
+    "metrics": [
+      { "label": "IOCs", "value": "1,247" },
+      { "label": "Events Today", "value": "18" },
+      { "label": "Active Feeds", "value": "6" }
+    ]
+  },
+  {
+    "name": "Wazuh",
+    "role": "SIEM",
+    "network": "SOC",
+    "ip": "192.168.10.15",
+    "status": "ONLINE",
+    "icon": "radar",
+    "metrics": [
+      { "label": "Agents", "value": "8" },
+      { "label": "Alerts Today", "value": "342" },
+      { "label": "Critical", "value": "5" }
+    ]
+  },
+  {
+    "name": "SOAR / n8n",
+    "role": "Security Orchestration",
+    "network": "SOC",
+    "ip": "192.168.10.20",
+    "status": "ONLINE",
+    "icon": "auto_fix_high",
+    "metrics": [
+      { "label": "Workflows", "value": "12" },
+      { "label": "Executions", "value": "87" },
+      { "label": "Failed", "value": "2" }
+    ]
+  },
+  {
+    "name": "Snort",
+    "role": "Network IDS",
+    "network": "DMZ",
+    "ip": "192.168.20.2",
+    "status": "ONLINE",
+    "icon": "security",
+    "metrics": [
+      { "label": "Active Rules", "value": "4,521" },
+      { "label": "Alerts", "value": "156" },
+      { "label": "Blocked IPs", "value": "23" }
+    ]
+  },
+  {
+    "name": "pfSense",
+    "role": "Firewall & VPN",
+    "network": "Gateway",
+    "ip": "192.168.20.1",
+    "status": "ONLINE",
+    "icon": "router",
+    "metrics": [
+      { "label": "FW Rules", "value": "89" },
+      { "label": "VPN Tunnels", "value": "3" },
+      { "label": "Blocked Today", "value": "412" }
+    ]
+  },
+  {
+    "name": "Nessus",
+    "role": "Vulnerability Scanner",
+    "network": "LAN",
+    "ip": "192.168.30.5",
+    "status": "WARNING",
+    "icon": "find_in_page",
+    "metrics": [
+      { "label": "Last Scan", "value": "2h ago" },
+      { "label": "Vulns Found", "value": "14" },
+      { "label": "Critical", "value": "2 ⚠️" }
+    ]
+  },
+  {
+    "name": "XDR Agents",
+    "role": "Extended Detection & Response",
+    "network": "LAN",
+    "ip": "Distributed",
+    "status": "ONLINE",
+    "icon": "devices",
+    "metrics": [
+      { "label": "Endpoints", "value": "6" },
+      { "label": "Threats Blocked", "value": "8" },
+      { "label": "Last Updated", "value": "5 min ago" }
+    ]
+  }
+]

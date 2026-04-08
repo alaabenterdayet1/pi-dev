@@ -1,0 +1,125 @@
+[
+  {
+    "id": "INC-2025-001",
+    "severity": "CRITICAL",
+    "type": "Ransomware",
+    "asset": "Patient DB",
+    "aiScore": 92,
+    "decision": "ISOLATE",
+    "confidence": 97,
+    "status": "OPEN",
+    "mttd": 2.1,
+    "detectedAt": "2025-04-04T08:12:00Z",
+    "assignee": "SOC-Analyst-1",
+    "iocs": [
+      {"type": "IP", "value": "185.220.101.47"},
+      {"type": "HASH", "value": "a3f5c9d1e2b4..."},
+      {"type": "BEHAVIOR", "value": "Mass file encryption detected"}
+    ],
+    "timeline": [
+      {"timestamp": "2025-04-04T08:10:00Z", "event": "Wazuh alert: high CPU on Patient DB", "severity": "WARN"},
+      {"timestamp": "2025-04-04T08:11:30Z", "event": "MISP IOC match: known ransomware hash", "severity": "CRITICAL"},
+      {"timestamp": "2025-04-04T08:12:00Z", "event": "Incident created — AI Decision: ISOLATE", "severity": "CRITICAL"}
+    ]
+  },
+  {
+    "id": "INC-2025-002",
+    "severity": "HIGH",
+    "type": "Compromised Credentials",
+    "asset": "Doctor Workstation",
+    "aiScore": 76,
+    "decision": "ESCALATE",
+    "confidence": 88,
+    "status": "INVESTIGATING",
+    "mttd": 4.5,
+    "detectedAt": "2025-04-04T07:45:00Z",
+    "assignee": "SOC-Analyst-2",
+    "iocs": [
+      {"type": "IP", "value": "103.14.122.8"},
+      {"type": "BEHAVIOR", "value": "Abnormal login from new country"}
+    ],
+    "timeline": [
+      {"timestamp": "2025-04-04T07:40:00Z", "event": "AD: failed login x12 from unknown IP", "severity": "WARN"},
+      {"timestamp": "2025-04-04T07:45:00Z", "event": "Incident created — AI Decision: ESCALATE", "severity": "CRITICAL"}
+    ]
+  },
+  {
+    "id": "INC-2025-003",
+    "severity": "CRITICAL",
+    "type": "Data Exfiltration",
+    "asset": "EHR System",
+    "aiScore": 89,
+    "decision": "ISOLATE",
+    "confidence": 94,
+    "status": "OPEN",
+    "mttd": 1.8,
+    "detectedAt": "2025-04-04T09:00:00Z",
+    "iocs": [
+      {"type": "DOMAIN", "value": "exfil-c2.onion"},
+      {"type": "IP", "value": "91.108.4.239"},
+      {"type": "BEHAVIOR", "value": "Large outbound data transfer 14GB"}
+    ],
+    "timeline": [
+      {"timestamp": "2025-04-04T08:58:00Z", "event": "Snort: outbound traffic anomaly detected", "severity": "WARN"},
+      {"timestamp": "2025-04-04T09:00:00Z", "event": "Incident created — AI Decision: ISOLATE", "severity": "CRITICAL"}
+    ]
+  },
+  {
+    "id": "INC-2025-004",
+    "severity": "LOW",
+    "type": "Port Scan",
+    "asset": "DMZ HTTP Server",
+    "aiScore": 23,
+    "decision": "MONITOR",
+    "confidence": 91,
+    "status": "OPEN",
+    "mttd": 6.2,
+    "detectedAt": "2025-04-04T06:30:00Z",
+    "iocs": [
+      {"type": "IP", "value": "45.33.32.156"}
+    ],
+    "timeline": [
+      {"timestamp": "2025-04-04T06:30:00Z", "event": "Snort: port scan detected from 45.33.32.156", "severity": "INFO"},
+      {"timestamp": "2025-04-04T06:30:00Z", "event": "Incident created — AI Decision: MONITOR", "severity": "INFO"}
+    ]
+  },
+  {
+    "id": "INC-2025-005",
+    "severity": "MEDIUM",
+    "type": "Suspicious Login",
+    "asset": "AD Server",
+    "aiScore": 54,
+    "decision": "ESCALATE",
+    "confidence": 79,
+    "status": "INVESTIGATING",
+    "mttd": 5.0,
+    "detectedAt": "2025-04-04T10:15:00Z",
+    "iocs": [
+      {"type": "IP", "value": "192.168.1.254"},
+      {"type": "BEHAVIOR", "value": "Off-hours admin login"}
+    ],
+    "timeline": [
+      {"timestamp": "2025-04-04T10:13:00Z", "event": "Wazuh: privileged login at 02:15 AM", "severity": "WARN"},
+      {"timestamp": "2025-04-04T10:15:00Z", "event": "Incident created — AI Decision: ESCALATE", "severity": "WARN"}
+    ]
+  },
+  {
+    "id": "INC-2025-006",
+    "severity": "HIGH",
+    "type": "Malware",
+    "asset": "IoMT Device",
+    "aiScore": 81,
+    "decision": "ISOLATE",
+    "confidence": 92,
+    "status": "OPEN",
+    "mttd": 3.3,
+    "detectedAt": "2025-04-04T11:00:00Z",
+    "iocs": [
+      {"type": "HASH", "value": "b7e1a23f..."},
+      {"type": "BEHAVIOR", "value": "Lateral movement attempt"}
+    ],
+    "timeline": [
+      {"timestamp": "2025-04-04T11:00:00Z", "event": "XDR: malicious process on IoMT device", "severity": "CRITICAL"}
+    ]
+  }
+]

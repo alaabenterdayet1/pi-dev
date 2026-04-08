@@ -1,0 +1,161 @@
+<div class="dashboard-grid">
+
+  <!-- LEFT COLUMN — Live Incidents -->
+  <div class="col-left">
+    <div class="section-header">
+      <span class="material-icons" style="color:#FF4560">warning</span>
+      <span class="section-title">LIVE INCIDENTS</span>
+      <span class="incident-count">{{ incidents.length }}</span>
+    </div>
+    <div class="incidents-list">
+      @for (inc of incidents; track inc.id) {
+        <div
+          class="incident-card glass-card"
+          [class]="'border-' + inc.severity.toLowerCase()"
+          [class.critical-pulse]="inc.severity === 'CRITICAL'"
+          [class.selected]="selectedIncident?.id === inc.id"
+          (click)="selectIncident(inc)"
+        >
+          <div class="inc-top">
+            <span class="inc-id mono">{{ inc.id }}</span>
+            <app-severity-badge [severity]="inc.severity"></app-severity-badge>
+          </div>
+          <div class="inc-type">{{ inc.type }}</div>
+          <div class="inc-bottom">
+            <span class="inc-asset text-secondary">{{ inc.asset }}</span>
+            <span class="inc-score mono" [style.color]="getScoreColor(inc.aiScore)">{{ inc.aiScore }}</span>
+          </div>
+          <div class="inc-time text-secondary">{{ inc.detectedAt | timeAgo }}</div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- CENTER COLUMN -->
+  <div class="col-center">
+    <!-- AI Score Section -->
+    @if (selectedIncident) {
+      <div class="ai-panel glass-card">
+        <div class="ai-panel-header">
+          <span class="material-icons" style="color:#6366F1">psychology</span>
+          <span class="section-title">AI ANALYSIS — {{ selectedIncident.id }}</span>
+        </div>
+        <div class="ai-content">
+          <!-- Gauge -->
+          <div class="gauge-block">
+            <app-ai-score-gauge [score]="selectedScore?.score ?? 0" [height]="200"></app-ai-score-gauge>
+            <div class="gauge-label text-secondary">AI THREAT SCORE</div>
+          </div>
+          <!-- Decision & Features -->
+          <div class="decision-block">
+            @if (selectedScore) {
+              <div class="decision-badge" [class]="'decision-' + selectedScore.decision.toLowerCase()">
+                {{ selectedScore.decision }}
+              </div>
+              <div class="confidence text-secondary">Confidence: <span class="mono" [style.color]="getScoreColor(selectedScore.score)">{{ selectedScore.confidence }}%</span></div>
+              <div class="features-title">Feature Contributions</div>
+              <div class="features-list">
+                @for (fc of selectedScore.featureContributions; track fc.feature) {
+                  <div class="feature-row">
+                    <span class="feature-name text-secondary">{{ fc.feature }}</span>
+                    <div class="feature-bar-bg">
+                      <div class="feature-bar" [style.width.%]="(fc.points / 30) * 100" [style.background]="getScoreColor(selectedScore!.score)"></div>
+                    </div>
+                    <span class="feature-pts mono">+{{ fc.points }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- KPIs -->
+    @if (kpis) {
+      <div class="kpi-grid">
+        <div class="kpi-card glass-card">
+          <div class="kpi-label">MTTD</div>
+          <div class="kpi-value mono text-cyan">{{ kpis.mttd }} <span class="kpi-unit">min</span></div>
+          <apx-chart [series]="mttdSparkline.series" [chart]="mttdSparkline.chart" [stroke]="mttdSparkline.stroke" [colors]="mttdSparkline.colors" [theme]="mttdSparkline.theme" [tooltip]="mttdSparkline.tooltip"></apx-chart>
+        </div>
+        <div class="kpi-card glass-card">
+          <div class="kpi-label">MTTR</div>
+          <div class="kpi-value mono" style="color:#6366F1">{{ kpis.mttr }} <span class="kpi-unit">min</span></div>
+          <apx-chart [series]="mttrSparkline.series" [chart]="mttrSparkline.chart" [stroke]="mttrSparkline.stroke" [colors]="mttrSparkline.colors" [theme]="mttrSparkline.theme" [tooltip]="mttrSparkline.tooltip"></apx-chart>
+        </div>
+        <div class="kpi-card glass-card">
+          <div class="kpi-label">FALSE POSITIVE RATE</div>
+          <div class="kpi-value mono text-low">{{ kpis.falsePositiveRate }}<span class="kpi-unit">%</span></div>
+          <div class="trend-arrow" [class.up]="kpis.fpTrend==='up'" [class.down]="kpis.fpTrend==='down'">
+            <span class="material-icons">{{ kpis.fpTrend === 'down' ? 'trending_down' : 'trending_up' }}</span>
+          </div>
+        </div>
+        <div class="kpi-card glass-card">
+          <div class="kpi-label">CRITICAL ASSET PROTECTION</div>
+          <div class="kpi-value mono text-low">{{ kpis.criticalAssetProtectionRate }}<span class="kpi-unit">%</span></div>
+          <div class="trend-arrow up">
+            <span class="material-icons">trending_up</span>
+          </div>
+        </div>
+        <div class="kpi-card kpi-full glass-card">
+          <div class="kpi-label">AUTOMATION RATIO</div>
+          <div class="automation-bar">
+            <div class="auto-fill" [style.width.%]="kpis.automationRatio">
+              <span>AUTOMATED {{ kpis.automationRatio }}%</span>
+            </div>
+            <div class="human-fill" [style.width.%]="100 - kpis.automationRatio">
+              <span>HUMAN {{ 100 - kpis.automationRatio }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col-right">
+    <!-- Threat Distribution -->
+    <div class="glass-card right-card">
+      <div class="section-header">
+        <span class="material-icons" style="color:#00D4FF">donut_large</span>
+        <span class="section-title">THREAT DISTRIBUTION</span>
+      </div>
+      @if (donutChart.series) {
+        <apx-chart [series]="donutChart.series" [chart]="donutChart.chart" [labels]="donutChart.labels" [colors]="donutChart.colors" [legend]="donutChart.legend" [dataLabels]="donutChart.dataLabels" [plotOptions]="donutChart.plotOptions" [theme]="donutChart.theme" [stroke]="donutChart.stroke"></apx-chart>
+      }
+      <!-- Severity Bars -->
+      @if (threatDist) {
+        <div class="severity-bars">
+          @for (s of threatDist.bySeverity; track s.severity) {
+            <div class="sev-bar-row">
+              <span class="sev-label" [class]="'text-' + s.severity.toLowerCase()">{{ s.severity }}</span>
+              <div class="sev-bar-bg">
+                <div class="sev-bar" [class]="'bg-' + s.severity.toLowerCase()" [style.width.%]="(s.count / 30) * 100"></div>
+              </div>
+              <span class="sev-count mono">{{ s.count }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Infrastructure Status -->
+    <div class="glass-card right-card">
+      <div class="section-header">
+        <span class="material-icons" style="color:#6366F1">settings_input_component</span>
+        <span class="section-title">INFRASTRUCTURE</span>
+      </div>
+      <div class="infra-list">
+        @for (tool of tools; track tool.name) {
+          <a class="infra-item" routerLink="/tools">
+            <div class="infra-dot" [style.background]="getStatusColor(tool.status)" [class.pulse-online]="tool.status === 'ONLINE'"></div>
+            <span class="infra-name">{{ tool.name }}</span>
+            <span class="infra-status mono" [style.color]="getStatusColor(tool.status)">{{ tool.status }}</span>
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+
+</div>

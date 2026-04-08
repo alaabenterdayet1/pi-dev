@@ -1,0 +1,118 @@
+.sidebar {
+  width: 240px;
+  min-width: 240px;
+  height: 100vh;
+  background: #070B14;
+  border-right: 1px solid #1E2D4E;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 100;
+}
+
+/* Logo */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+  border-bottom: 1px solid #1E2D4E;
+  margin-bottom: 8px;
+}
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #00D4FF20, #6366F120);
+  border: 1px solid #00D4FF40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(0,212,255,0.2);
+}
+.logo-icon .material-icons { color: #00D4FF; font-size: 20px; }
+.logo-title {
+  display: block;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #E2E8F0;
+  letter-spacing: 0.12em;
+}
+.logo-sub {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: #00D4FF;
+  letter-spacing: 0.2em;
+}
+
+/* Nav */
+.sidebar-nav {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #64748B;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+.nav-item:hover {
+  background: rgba(30, 45, 78, 0.5);
+  color: #E2E8F0;
+}
+.nav-item.active {
+  background: rgba(0, 212, 255, 0.08);
+  color: #00D4FF;
+  box-shadow: 0 0 15px rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.15);
+}
+.nav-item.active .nav-icon { color: #00D4FF; }
+.nav-glow {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: #00D4FF;
+  border-radius: 0 2px 2px 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.nav-item.active .nav-glow { opacity: 1; box-shadow: 0 0 10px #00D4FF; }
+.nav-icon { font-size: 18px; transition: color 0.2s; }
+.nav-item:hover .nav-icon { color: #E2E8F0; }
+
+/* Status */
+.sidebar-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-top: 1px solid #1E2D4E;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00E396;
+  animation: pulse-online 2s infinite;
+}
+.status-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #00E396;
+  letter-spacing: 0.12em;
+}

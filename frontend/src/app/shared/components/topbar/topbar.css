@@ -1,0 +1,47 @@
+.topbar {
+  height: 60px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: rgba(10, 14, 26, 0.95);
+  border-bottom: 1px solid #1E2D4E;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(10px);
+}
+.page-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #E2E8F0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.system-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: #00D4FF;
+  letter-spacing: 0.05em;
+}
+.soc-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #00D4FF;
+  letter-spacing: 0.1em;
+  box-shadow: 0 0 10px rgba(0,212,255,0.1);
+}

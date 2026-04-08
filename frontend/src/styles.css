@@ -1,0 +1,134 @@
+/* ─── Design System — SOC CTI Healthcare ─────────────────────────────────── */
+@import '@angular/material/prebuilt-themes/deeppurple-amber.css';
+
+:root {
+  --bg-main:        #0A0E1A;
+  --bg-card:        #0F1629;
+  --bg-sidebar:     #070B14;
+  --border:         #1E2D4E;
+  --cyan:           #00D4FF;
+  --violet:         #6366F1;
+  --critical:       #FF4560;
+  --high:           #FF8C00;
+  --medium:         #FFD700;
+  --low:            #00E396;
+  --text:           #E2E8F0;
+  --text-secondary: #64748B;
+  --glow-cyan:      0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body.soc-body {
+  background: var(--bg-main);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+/* ─── Typography ─────────────────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6, .title { font-family: 'Rajdhani', sans-serif; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-main); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+/* ─── Glass Card ─────────────────────────────────────────────────────────── */
+.glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ─── Severity Borders ───────────────────────────────────────────────────── */
+.border-critical { border-left: 3px solid var(--critical) !important; }
+.border-high     { border-left: 3px solid var(--high) !important; }
+.border-medium   { border-left: 3px solid var(--medium) !important; }
+.border-low      { border-left: 3px solid var(--low) !important; }
+
+/* ─── Severity Colors ────────────────────────────────────────────────────── */
+.text-critical { color: var(--critical); }
+.text-high     { color: var(--high); }
+.text-medium   { color: var(--medium); }
+.text-low      { color: var(--low); }
+.text-cyan     { color: var(--cyan); }
+.text-violet   { color: var(--violet); }
+.text-secondary { color: var(--text-secondary); }
+
+/* ─── Pulse animations ───────────────────────────────────────────────────── */
+@keyframes pulse-critical {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 69, 96, 0.6); }
+  50%       { box-shadow: 0 0 0 6px rgba(255, 69, 96, 0); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.85); }
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-online {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 227, 150, 0.6); }
+  50%       { box-shadow: 0 0 0 5px rgba(0, 227, 150, 0); }
+}
+.fade-in-up { animation: fadeInUp 0.35s ease both; }
+.critical-pulse { animation: pulse-critical 2s infinite; }
+.pulse-online { animation: pulse-online 2s infinite; }
+
+/* ─── Angular Material overrides ─────────────────────────────────────────── */
+.mat-mdc-form-field { width: 100%; }
+.mat-mdc-form-field .mat-mdc-text-field-wrapper { background: rgba(30, 45, 78, 0.4) !important; }
+.mdc-text-field--filled:not(.mdc-text-field--disabled) { background: rgba(30, 45, 78, 0.4) !important; }
+.mat-mdc-table { background: transparent !important; }
+.mat-mdc-row, .mat-mdc-header-row { border-bottom-color: var(--border) !important; }
+.mat-mdc-header-cell { color: var(--text-secondary) !important; font-family: 'Rajdhani', sans-serif !important; font-size: 12px !important; letter-spacing: 0.08em; text-transform: uppercase; }
+.mat-mdc-cell { color: var(--text) !important; border-bottom-color: var(--border) !important; }
+.mat-mdc-row:hover .mat-mdc-cell { background: rgba(30, 45, 78, 0.5) !important; }
+.mat-mdc-paginator { background: transparent !important; color: var(--text-secondary) !important; }
+.mat-mdc-select-value, .mat-mdc-select-arrow { color: var(--text) !important; }
+.mat-mdc-option { background: var(--bg-card) !important; color: var(--text) !important; }
+.mat-mdc-option:hover { background: var(--border) !important; }
+.mat-mdc-dialog-container { background: var(--bg-card) !important; }
+.mat-mdc-chip { font-family: 'JetBrains Mono', monospace !important; font-size: 11px !important; }
+.mat-mdc-progress-bar { border-radius: 4px; }
+
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
+.btn-cyan {
+  background: var(--cyan) !important;
+  color: #0A0E1A !important;
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em;
+  box-shadow: var(--glow-cyan) !important;
+  border: none !important;
+}
+.btn-cyan:hover { filter: brightness(1.15); }
+.btn-outline {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  font-family: 'Rajdhani', sans-serif !important;
+  font-weight: 600 !important;
+}
+
+/* ─── ApexCharts global dark fix ─────────────────────────────────────────── */
+.apexcharts-tooltip { background: var(--bg-card) !important; border-color: var(--border) !important; color: var(--text) !important; }
+.apexcharts-legend-text { color: var(--text-secondary) !important; font-family: 'DM Sans', sans-serif !important; }
+
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+.app-shell { display: flex; height: 100vh; overflow: hidden; }
+.main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.page-content { flex: 1; overflow-y: auto; padding: 20px; }
+
+/* ─── Snackbar toast ─────────────────────────────────────────────────────── */
+.toast-success .mdc-snackbar__surface { background: #0F3D2E !important; border: 1px solid var(--low) !important; }
+.toast-error .mdc-snackbar__surface { background: #3D0F1A !important; border: 1px solid var(--critical) !important; }

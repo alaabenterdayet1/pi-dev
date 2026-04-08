@@ -1,0 +1,33 @@
+<aside class="sidebar">
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <span class="material-icons">local_hospital</span>
+    </div>
+    <div class="logo-text">
+      <span class="logo-title">SOC CTI</span>
+      <span class="logo-sub">HEALTHCARE</span>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar-nav">
+    @for (item of navItems; track item.path) {
+      <a
+        class="nav-item"
+        [routerLink]="item.path"
+        routerLinkActive="active"
+      >
+        <span class="material-icons nav-icon">{{ item.icon }}</span>
+        <span class="nav-label">{{ item.label }}</span>
+        <div class="nav-glow"></div>
+      </a>
+    }
+  </nav>
+
+  <!-- Status -->
+  <div class="sidebar-status">
+    <div class="status-dot"></div>
+    <span class="status-text">SYSTEM ONLINE</span>
+  </div>
+</aside>

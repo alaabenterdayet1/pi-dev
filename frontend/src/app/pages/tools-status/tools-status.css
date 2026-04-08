@@ -1,0 +1,37 @@
+.tools-layout { display: flex; flex-direction: column; gap: 16px; }
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+.tools-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; }
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-title { font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 700; color: #E2E8F0; letter-spacing: 0.1em; text-transform: uppercase; }
+.header-right { display: flex; align-items: center; gap: 16px; }
+.last-updated { font-size: 12px; letter-spacing: 0.05em; }
+
+/* ─── Grid ───────────────────────────────────────────────────────────────── */
+.tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+
+/* ─── Tool Card ──────────────────────────────────────────────────────────── */
+.tool-card { padding: 18px; display: flex; flex-direction: column; gap: 12px; transition: transform 0.2s, box-shadow 0.2s; }
+.tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+.status-border-online  { border-top: 2px solid #00E396; }
+.status-border-warning { border-top: 2px solid #FFD700; }
+.status-border-offline { border-top: 2px solid #FF4560; }
+.status-border-degraded { border-top: 2px solid #FF8C00; }
+
+.tool-header { display: flex; align-items: flex-start; gap: 12px; }
+.tool-icon { width: 40px; height: 40px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tool-icon .material-icons { color: #6366F1; font-size: 20px; }
+.tool-info { flex: 1; }
+.tool-name { font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 700; color: #E2E8F0; letter-spacing: 0.05em; }
+.tool-role { font-size: 12px; margin-top: 2px; }
+
+.tool-status-badge { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; border: 1px solid; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; flex-shrink: 0; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+.tool-network { display: flex; align-items: center; gap: 5px; color: #64748B; padding: 5px 8px; background: rgba(30,45,78,0.4); border-radius: 5px; }
+
+.tool-metrics { display: flex; flex-direction: column; gap: 7px; }
+.metric-item { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(30,45,78,0.5); }
+.metric-item:last-child { border: none; }
+.metric-label { font-size: 12px; }
+.metric-value { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #E2E8F0; font-weight: 500; }
