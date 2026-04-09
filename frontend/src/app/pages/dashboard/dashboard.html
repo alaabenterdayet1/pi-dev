@@ -1,73 +1,86 @@
 <div class="dashboard-grid">
 
-  <!-- LEFT COLUMN — Live Incidents -->
+  <!-- LEFT COLUMN — Latest Alerts -->
   <div class="col-left">
     <div class="section-header">
       <span class="material-icons" style="color:#FF4560">warning</span>
-      <span class="section-title">LIVE INCIDENTS</span>
-      <span class="incident-count">{{ incidents.length }}</span>
+      <span class="section-title">LATEST ALERTS</span>
+      <span class="incident-count">{{ alerts.length }}</span>
     </div>
     <div class="incidents-list">
-      @for (inc of incidents; track inc.id) {
+      @for (alert of alerts; track trackByAlertId($index, alert)) {
         <div
           class="incident-card glass-card"
-          [class]="'border-' + inc.severity.toLowerCase()"
-          [class.critical-pulse]="inc.severity === 'CRITICAL'"
-          [class.selected]="selectedIncident?.id === inc.id"
-          (click)="selectIncident(inc)"
+          [class]="'border-' + getAlertSeverity(alert).toLowerCase()"
+          [class.critical-pulse]="getAlertSeverity(alert) === 'CRITICAL'"
+          [class.selected]="selectedAlert && getAlertId(selectedAlert) === getAlertId(alert)"
+          (click)="selectAlert(alert)"
         >
           <div class="inc-top">
-            <span class="inc-id mono">{{ inc.id }}</span>
-            <app-severity-badge [severity]="inc.severity"></app-severity-badge>
+            <span class="inc-id mono">RULE {{ alert.rule_id || 'N/A' }}</span>
+            <app-severity-badge [severity]="getAlertSeverity(alert)"></app-severity-badge>
           </div>
-          <div class="inc-type">{{ inc.type }}</div>
+          <div class="inc-type">{{ getAlertTitle(alert) }}</div>
           <div class="inc-bottom">
-            <span class="inc-asset text-secondary">{{ inc.asset }}</span>
-            <span class="inc-score mono" [style.color]="getScoreColor(inc.aiScore)">{{ inc.aiScore }}</span>
+            <span class="inc-asset text-secondary">{{ alert.src_ip || alert.iris_alert_source || 'Unknown source' }}</span>
+            <span class="inc-score mono">L{{ alert.rule_level ?? 0 }}</span>
           </div>
-          <div class="inc-time text-secondary">{{ inc.detectedAt | timeAgo }}</div>
+          <div class="inc-time text-secondary">{{ getAlertTime(alert) | timeAgo }}</div>
         </div>
       }
+    </div>
+
+    <div class="glass-card summary-card">
+      <div class="summary-title">ALERT STATS</div>
+      <div class="summary-row">
+        <span>Total</span>
+        <span class="mono">{{ totalCount }}</span>
+      </div>
+      <div class="summary-row">
+        <span>Blocked</span>
+        <span class="mono text-critical">{{ blockedCount }}</span>
+      </div>
+      <div class="summary-row">
+        <span>Sources uniques</span>
+        <span class="mono">{{ uniqueSources }}</span>
+      </div>
     </div>
   </div>
 
   <!-- CENTER COLUMN -->
   <div class="col-center">
-    <!-- AI Score Section -->
-    @if (selectedIncident) {
+    @if (selectedAlert) {
       <div class="ai-panel glass-card">
         <div class="ai-panel-header">
-          <span class="material-icons" style="color:#6366F1">psychology</span>
-          <span class="section-title">AI ANALYSIS — {{ selectedIncident.id }}</span>
+          <span class="material-icons" style="color:#6366F1">description</span>
+          <span class="section-title">ALERT DETAILS — RULE {{ selectedAlert.rule_id || 'N/A' }}</span>
         </div>
-        <div class="ai-content">
-          <!-- Gauge -->
-          <div class="gauge-block">
-            <app-ai-score-gauge [score]="selectedScore?.score ?? 0" [height]="200"></app-ai-score-gauge>
-            <div class="gauge-label text-secondary">AI THREAT SCORE</div>
+        <div class="details-grid">
+          <div class="detail-item">
+            <span class="label">Description</span>
+            <span class="value">{{ selectedAlert.rule_description || selectedAlert.iris_alert_title || 'N/A' }}</span>
           </div>
-          <!-- Decision & Features -->
-          <div class="decision-block">
-            @if (selectedScore) {
-              <div class="decision-badge" [class]="'decision-' + selectedScore.decision.toLowerCase()">
-                {{ selectedScore.decision }}
-              </div>
-              <div class="confidence text-secondary">Confidence: <span class="mono" [style.color]="getScoreColor(selectedScore.score)">{{ selectedScore.confidence }}%</span></div>
-              <div class="features-title">Feature Contributions</div>
-              <div class="features-list">
-                @for (fc of selectedScore.featureContributions; track fc.feature) {
-                  <div class="feature-row">
-                    <span class="feature-name text-secondary">{{ fc.feature }}</span>
-                    <div class="feature-bar-bg">
-                      <div class="feature-bar" [style.width.%]="(fc.points / 30) * 100" [style.background]="getScoreColor(selectedScore!.score)"></div>
-                    </div>
-                    <span class="feature-pts mono">+{{ fc.points }}</span>
-                  </div>
-                }
-              </div>
-            }
-          </div>
+          <div class="detail-item"><span class="label">Severity</span><span class="value"><app-severity-badge [severity]="getAlertSeverity(selectedAlert)"></app-severity-badge></span></div>
+          <div class="detail-item"><span class="label">Source IP</span><span class="value mono">{{ selectedAlert.src_ip || selectedAlert.iris_alert_source || 'N/A' }}</span></div>
+          <div class="detail-item"><span class="label">User</span><span class="value mono">{{ selectedAlert.dst_user || 'N/A' }}</span></div>
+          <div class="detail-item"><span class="label">Program</span><span class="value mono">{{ selectedAlert.log_program || 'N/A' }}</span></div>
+          <div class="detail-item"><span class="label">Fired Times</span><span class="value mono">{{ selectedAlert.fired_times ?? 0 }}</span></div>
+          <div class="detail-item"><span class="label">MITRE IDs</span><span class="value mono">{{ selectedAlert.mitre_ids || 'N/A' }}</span></div>
+          <div class="detail-item"><span class="label">Firewall Action</span><span class="value mono">{{ selectedAlert.fw_action_type || 'N/A' }}</span></div>
+          <div class="detail-item"><span class="label">Agent</span><span class="value mono">{{ selectedAlert.agent_name || 'N/A' }}</span></div>
         </div>
+
+        <div class="details-actions">
+          <button class="details-btn" type="button" (click)="toggleFullDetails()">
+            {{ detailsButtonLabel }}
+          </button>
+        </div>
+
+        @if (showFullDetails) {
+          <div class="raw-json">
+            <pre>{{ selectedAlertJson }}</pre>
+          </div>
+        }
       </div>
     }
 
@@ -115,29 +128,23 @@
 
   <!-- RIGHT COLUMN -->
   <div class="col-right">
-    <!-- Threat Distribution -->
     <div class="glass-card right-card">
       <div class="section-header">
         <span class="material-icons" style="color:#00D4FF">donut_large</span>
-        <span class="section-title">THREAT DISTRIBUTION</span>
+        <span class="section-title">SEVERITY DISTRIBUTION</span>
       </div>
-      @if (donutChart.series) {
-        <apx-chart [series]="donutChart.series" [chart]="donutChart.chart" [labels]="donutChart.labels" [colors]="donutChart.colors" [legend]="donutChart.legend" [dataLabels]="donutChart.dataLabels" [plotOptions]="donutChart.plotOptions" [theme]="donutChart.theme" [stroke]="donutChart.stroke"></apx-chart>
-      }
-      <!-- Severity Bars -->
-      @if (threatDist) {
-        <div class="severity-bars">
-          @for (s of threatDist.bySeverity; track s.severity) {
-            <div class="sev-bar-row">
-              <span class="sev-label" [class]="'text-' + s.severity.toLowerCase()">{{ s.severity }}</span>
-              <div class="sev-bar-bg">
-                <div class="sev-bar" [class]="'bg-' + s.severity.toLowerCase()" [style.width.%]="(s.count / 30) * 100"></div>
-              </div>
-              <span class="sev-count mono">{{ s.count }}</span>
+
+      <div class="severity-bars">
+        @for (s of severityStats; track trackBySeverity($index, s)) {
+          <div class="sev-bar-row">
+            <span class="sev-label" [class]="'text-' + s.severity.toLowerCase()">{{ s.severity }}</span>
+            <div class="sev-bar-bg">
+              <div class="sev-bar" [class]="'bg-' + s.severity.toLowerCase()" [style.width.%]="(s.count / maxSeverityCount) * 100"></div>
             </div>
-          }
-        </div>
-      }
+            <span class="sev-count mono">{{ s.count }}</span>
+          </div>
+        }
+      </div>
     </div>
 
     <!-- Infrastructure Status -->

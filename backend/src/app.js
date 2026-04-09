@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 
 const patientRoutes = require('./routes/patientRoutes');
+const alertRoutes = require('./routes/alertRoutes');
 
 const app = express();
 
@@ -13,5 +14,6 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/patients', patientRoutes);
+app.use('/api/alerts', alertRoutes);
 
 module.exports = app;
