@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
 export class SidebarComponent {
   navItems = [
     { path: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
-    { path: '/incidents', icon: 'warning', label: 'Incidents' },
+    { path: '/incidents', icon: 'warning', label: 'Historique' },
     { path: '/ai-scoring', icon: 'psychology', label: 'AI Scoring' },
     { path: '/tools', icon: 'settings_input_component', label: 'Tools Status' }
   ];

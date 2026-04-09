@@ -20,7 +20,7 @@
         @for (s of statuses; track s) { <mat-option [value]="s">{{ s }}</mat-option> }
       </mat-select>
       <button mat-flat-button class="btn-cyan" (click)="applyFilters()">APPLY</button>
-      <div class="total-badge">{{ dataSource.data.length }} INCIDENTS</div>
+      <div class="total-badge">{{ dataSource.data.length }} HISTORIQUE</div>
       <button mat-stroked-button class="btn-outline" (click)="exportCsv()">
         <mat-icon>download</mat-icon> EXPORT CSV
       </button>
@@ -139,6 +139,17 @@
             </div>
           </div>
         }
+
+        <!-- All Alert Details -->
+        <div class="drawer-section">
+          <div class="drawer-subtitle">Tous Les Details</div>
+          @for (entry of getAllDetailEntries(selectedIncident); track entry.key) {
+            <div class="detail-row" [class.detail-full]="entry.isLong">
+              <span class="detail-label">{{ entry.label }}</span>
+              <span class="detail-value" [class.mono]="!entry.isLong">{{ entry.value }}</span>
+            </div>
+          }
+        </div>
 
         <!-- Action Buttons -->
         <div class="action-buttons">

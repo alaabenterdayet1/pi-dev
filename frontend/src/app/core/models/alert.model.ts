@@ -28,6 +28,12 @@ export interface AlertItem {
   fw_action_type?: string;
   fw_interface?: string;
   fw_source_blocked?: string;
+
+  ai_classification?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  ai_decision?: 'ISOLATE' | 'ESCALATE' | 'INVESTIGATE' | 'MONITOR';
+  ai_confidence?: number;
+  ai_risk_score?: number;
+  ai_recommendation?: string;
 }
 
 export interface AlertsResponse {

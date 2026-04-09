@@ -22,7 +22,7 @@ export class TopbarComponent implements OnInit, OnDestroy {
 
   private pageTitles: Record<string, string> = {
     '/dashboard': 'Dashboard',
-    '/incidents': 'Incidents',
+    '/incidents': 'Historique',
     '/ai-scoring': 'AI Scoring Center',
     '/tools': 'Tools Status'
   };

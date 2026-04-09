@@ -27,6 +27,10 @@
 .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(30,45,78,0.5); font-size: 13px; }
 .detail-row:last-child { border: none; }
 .detail-label { color: #64748B; font-size: 12px; }
+.detail-value { color: #E2E8F0; text-align: right; max-width: 60%; word-break: break-word; }
+.detail-row.detail-full { display: block; }
+.detail-row.detail-full .detail-label { display: block; margin-bottom: 3px; }
+.detail-row.detail-full .detail-value { display: block; max-width: 100%; text-align: left; }
 .ioc-item { display: flex; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(30,45,78,0.3); }
 .ioc-type { font-size: 10px; font-family: 'JetBrains Mono', monospace; background: rgba(99,102,241,0.15); color: #6366F1; border-radius: 3px; padding: 2px 6px; min-width: 60px; text-align: center; }
 .ioc-value { font-size: 11px; color: #E2E8F0; word-break: break-all; }

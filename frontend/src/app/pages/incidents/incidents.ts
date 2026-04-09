@@ -32,6 +32,43 @@ import { TimeAgoPipe } from '../../shared/pipes/time-ago.pipe';
   styleUrl: './incidents.css'
 })
 export class IncidentsComponent implements OnInit, OnDestroy {
+  private readonly detailOrder = [
+    '_id',
+    'rule_id',
+    'rule_level',
+    'rule_description',
+    'fired_times',
+    'rule_groups',
+    'mitre_ids',
+    'mitre_tactics',
+    'mitre_techniques',
+    'agent_name',
+    'src_ip',
+    'src_port',
+    'dst_user',
+    'log_program',
+    'log_location',
+    'decoder_name',
+    'vt_reputation',
+    'vt_malicious',
+    'vt_suspicious',
+    'vt_undetected',
+    'vt_tags',
+    'cortex_taxonomies',
+    'iris_severity_id',
+    'iris_severity_name',
+    'iris_alert_title',
+    'iris_alert_source',
+    'fw_action_type',
+    'fw_interface',
+    'fw_source_blocked',
+    'ai_classification',
+    'ai_decision',
+    'ai_confidence',
+    'ai_risk_score',
+    'ai_recommendation',
+  ];
+
   @ViewChild(MatSort) sort!: MatSort;
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild('detailDrawer') detailDrawer!: MatDrawer;
@@ -95,7 +132,7 @@ export class IncidentsComponent implements OnInit, OnDestroy {
     this.incidentsSvc.respondToIncident(this.selectedIncident.id, action).pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.actionLoading = false;
-        this.snack.open(`Action "${action}" applied to ${this.selectedIncident!.id}`, '✓', { panelClass: 'toast-success' });
+        this.snack.open(`Action "${action}" appliquee sur historique ${this.selectedIncident!.id}`, '✓', { panelClass: 'toast-success' });
         this.cdr.markForCheck();
       });
   }
@@ -103,10 +140,51 @@ export class IncidentsComponent implements OnInit, OnDestroy {
   getScoreColor(s: number): string { return s >= 70 ? '#FF4560' : s >= 40 ? '#FF8C00' : '#00E396'; }
   trackById = (_: number, i: Incident) => i.id;
 
+  getAllDetailEntries(incident: Incident): Array<{ key: string; label: string; value: string; isLong: boolean }> {
+    const source = incident.rawDetails ?? {};
+    return Object.entries(source)
+      .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
+      .map(([key, value]) => {
+        const formatted = this.formatDetailValue(value);
+        return {
+          key,
+          label: this.toReadableLabel(key),
+          value: formatted,
+          isLong: formatted.length > 48,
+        };
+      })
+      .sort((a, b) => this.sortDetailKeys(a.key, b.key));
+  }
+
+  private sortDetailKeys(a: string, b: string): number {
+    const ai = this.detailOrder.indexOf(a);
+    const bi = this.detailOrder.indexOf(b);
+    const aRank = ai === -1 ? Number.MAX_SAFE_INTEGER : ai;
+    const bRank = bi === -1 ? Number.MAX_SAFE_INTEGER : bi;
+    if (aRank !== bRank) return aRank - bRank;
+    return a.localeCompare(b);
+  }
+
+  private toReadableLabel(key: string): string {
+    return key
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  private formatDetailValue(value: unknown): string {
+    if (Array.isArray(value)) return value.map(v => String(v)).join(', ');
+    if (typeof value === 'object' && value !== null) {
+      return Object.entries(value as Record<string, unknown>)
+        .map(([k, v]) => `${k}: ${String(v)}`)
+        .join(' | ');
+    }
+    return String(value);
+  }
+
   exportCsv(): void {
     const headers = 'ID,Severity,Type,Asset,Score,Decision,Status,MTTD\n';
     const rows = this.dataSource.data.map(i => `${i.id},${i.severity},${i.type},${i.asset},${i.aiScore},${i.decision},${i.status},${i.mttd}`).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'incidents.csv'; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'historique.csv'; a.click();
   }
 }

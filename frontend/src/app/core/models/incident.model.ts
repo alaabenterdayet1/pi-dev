@@ -12,6 +12,7 @@ export interface Incident {
   iocs?: IOC[];
   timeline?: TimelineEvent[];
   assignee?: string;
+  rawDetails?: Record<string, unknown>;
 }
 
 export interface IOC {

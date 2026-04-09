@@ -23,6 +23,43 @@ import { TimeAgoPipe } from '../../shared/pipes/time-ago.pipe';
   styleUrl: './dashboard.css'
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  private readonly detailsOrder = [
+    '_id',
+    'rule_id',
+    'rule_level',
+    'rule_description',
+    'fired_times',
+    'rule_groups',
+    'mitre_ids',
+    'mitre_tactics',
+    'mitre_techniques',
+    'agent_name',
+    'src_ip',
+    'src_port',
+    'dst_user',
+    'log_program',
+    'log_location',
+    'decoder_name',
+    'vt_reputation',
+    'vt_malicious',
+    'vt_suspicious',
+    'vt_undetected',
+    'vt_tags',
+    'cortex_taxonomies',
+    'iris_severity_id',
+    'iris_severity_name',
+    'iris_alert_title',
+    'iris_alert_source',
+    'fw_action_type',
+    'fw_interface',
+    'fw_source_blocked',
+    'ai_classification',
+    'ai_decision',
+    'ai_confidence',
+    'ai_risk_score',
+    'ai_recommendation'
+  ];
+
   private destroy$ = new Subject<void>();
   private cdr = inject(ChangeDetectorRef);
   private alertsSvc = inject(AlertsService);
@@ -95,6 +132,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getAlertSeverity(alert: AlertItem): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
+    if (alert.ai_classification) return alert.ai_classification;
+
     const named = (alert.iris_severity_name || '').toLowerCase();
     if (named === 'critical') return 'CRITICAL';
     if (named === 'high') return 'HIGH';
@@ -156,9 +195,67 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.showFullDetails ? 'Masquer les détails' : 'Voir tous les détails';
   }
 
-  get selectedAlertJson(): string {
-    if (!this.selectedAlert) return '';
-    return JSON.stringify(this.selectedAlert, null, 2);
+  get allDetailEntries(): Array<{ key: string; label: string; value: string; isLong: boolean }> {
+    if (!this.selectedAlert) return [];
+
+    const source = this.selectedAlert as Record<string, unknown>;
+    return Object.entries(source)
+      .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
+      .map(([key, value]) => {
+        const formatted = this.formatDetailValue(key, value);
+        return {
+          key,
+          label: this.toReadableLabel(key),
+          value: formatted,
+          isLong: formatted.length > 38,
+        };
+      })
+      .sort((a, b) => this.sortDetailKeys(a.key, b.key));
+  }
+
+  private sortDetailKeys(a: string, b: string): number {
+    const ai = this.detailsOrder.indexOf(a);
+    const bi = this.detailsOrder.indexOf(b);
+    const aRank = ai === -1 ? Number.MAX_SAFE_INTEGER : ai;
+    const bRank = bi === -1 ? Number.MAX_SAFE_INTEGER : bi;
+
+    if (aRank !== bRank) return aRank - bRank;
+    return a.localeCompare(b);
+  }
+
+  private toReadableLabel(key: string): string {
+    const labels = new Map<string, string>([
+      ['ai_classification', 'AI Classification'],
+      ['ai_decision', 'AI Decision'],
+      ['ai_confidence', 'AI Confidence (%)'],
+      ['ai_risk_score', 'AI Risk Score'],
+      ['ai_recommendation', 'AI Recommendation'],
+    ]);
+    const special = labels.get(key);
+    if (special) return special;
+
+    return key
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  private formatDetailValue(key: string, value: unknown): string {
+    if (key === '_id' && typeof value === 'object' && value !== null) {
+      const oid = (value as { $oid?: string }).$oid;
+      return oid || 'N/A';
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(v => String(v)).join(', ');
+    }
+
+    if (typeof value === 'object' && value !== null) {
+      return Object.entries(value as Record<string, unknown>)
+        .map(([k, v]) => `${this.toReadableLabel(k)}: ${String(v)}`)
+        .join(' | ');
+    }
+
+    return String(value);
   }
 
   private buildDonut(d: ThreatDistribution): void {

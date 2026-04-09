@@ -23,8 +23,9 @@
           <div class="inc-type">{{ getAlertTitle(alert) }}</div>
           <div class="inc-bottom">
             <span class="inc-asset text-secondary">{{ alert.src_ip || alert.iris_alert_source || 'Unknown source' }}</span>
-            <span class="inc-score mono">L{{ alert.rule_level ?? 0 }}</span>
+            <span class="inc-score mono">{{ alert.ai_risk_score ?? (alert.rule_level ?? 0) }}</span>
           </div>
+          <div class="inc-reco text-secondary">{{ alert.ai_decision || 'MONITOR' }} - {{ alert.ai_recommendation || 'Recommendation pending' }}</div>
           <div class="inc-time text-secondary">{{ getAlertTime(alert) | timeAgo }}</div>
         </div>
       }
@@ -68,6 +69,9 @@
           <div class="detail-item"><span class="label">MITRE IDs</span><span class="value mono">{{ selectedAlert.mitre_ids || 'N/A' }}</span></div>
           <div class="detail-item"><span class="label">Firewall Action</span><span class="value mono">{{ selectedAlert.fw_action_type || 'N/A' }}</span></div>
           <div class="detail-item"><span class="label">Agent</span><span class="value mono">{{ selectedAlert.agent_name || 'N/A' }}</span></div>
+          <div class="detail-item"><span class="label">AI Classification</span><span class="value"><app-severity-badge [severity]="selectedAlert.ai_classification || getAlertSeverity(selectedAlert)"></app-severity-badge></span></div>
+          <div class="detail-item"><span class="label">AI Confidence</span><span class="value mono">{{ selectedAlert.ai_confidence ?? 0 }}%</span></div>
+          <div class="detail-item detail-item-wide"><span class="label">AI Recommendation</span><span class="value">{{ selectedAlert.ai_recommendation || 'No recommendation generated yet.' }}</span></div>
         </div>
 
         <div class="details-actions">
@@ -77,8 +81,16 @@
         </div>
 
         @if (showFullDetails) {
-          <div class="raw-json">
-            <pre>{{ selectedAlertJson }}</pre>
+          <div class="all-details-panel">
+            <div class="all-details-title">Tous les détails</div>
+            <div class="all-details-grid">
+              @for (entry of allDetailEntries; track entry.key) {
+                <div class="all-detail-item" [class.all-detail-item-wide]="entry.isLong">
+                  <span class="all-detail-label">{{ entry.label }}</span>
+                  <span class="all-detail-value" [class.mono]="!entry.isLong">{{ entry.value }}</span>
+                </div>
+              }
+            </div>
           </div>
         }
       </div>

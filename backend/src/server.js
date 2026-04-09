@@ -1,4 +1,13 @@
-require('dotenv').config();
+const path = require('path');
+const dotenv = require('dotenv');
+
+const envFiles = ['.env', '.env.example'];
+for (const envFile of envFiles) {
+  const result = dotenv.config({ path: path.resolve(__dirname, '..', envFile) });
+  if (!result.error) {
+    break;
+  }
+}
 
 const app = require('./app');
 const connectDB = require('./config/db');
