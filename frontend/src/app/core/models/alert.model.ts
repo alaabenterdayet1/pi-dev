@@ -28,6 +28,7 @@ export interface AlertItem {
   fw_action_type?: string;
   fw_interface?: string;
   fw_source_blocked?: string;
+  alert_status?: 'OPEN' | 'INVESTIGATING' | 'CLOSED';
 
   ai_classification?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   ai_decision?: 'ISOLATE' | 'ESCALATE' | 'INVESTIGATE' | 'MONITOR';

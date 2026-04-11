@@ -70,6 +70,13 @@ export class IncidentsService {
     ).pipe(catchError(() => of({ success: true })));
   }
 
+  updateIncidentStatus(id: string, status: Incident['status']): Observable<{ success: boolean }> {
+    return this.http.patch<{ message: string }>(`${this.base}/alerts/${id}/status`, { status }).pipe(
+      map(() => ({ success: true })),
+      catchError(() => of({ success: false }))
+    );
+  }
+
   private mapAlertToIncident(alert: AlertItem): Incident {
     const mongoId = this.getAlertId(alert);
     const severity = this.toSeverity(alert);
@@ -143,6 +150,10 @@ export class IncidentsService {
   }
 
   private toStatus(alert: AlertItem): Incident['status'] {
+    if (alert.alert_status === 'OPEN' || alert.alert_status === 'INVESTIGATING' || alert.alert_status === 'CLOSED') {
+      return alert.alert_status;
+    }
+
     const action = (alert.fw_action_type || '').toLowerCase();
     if (action === 'block') return 'INVESTIGATING';
     if ((alert.vt_malicious ?? 0) > 0) return 'OPEN';

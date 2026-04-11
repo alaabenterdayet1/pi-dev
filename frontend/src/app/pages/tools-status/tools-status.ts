@@ -18,6 +18,45 @@ import { ToolStatus } from '../../core/models/tool-status.model';
   styleUrl: './tools-status.css'
 })
 export class ToolsStatusComponent implements OnInit, OnDestroy {
+  private readonly allowedToolLinks: Record<string, string> = {
+    misp: 'http://192.168.1.60',
+    cortex: 'http://192.168.1.45:9001',
+    wazuh: 'http://192.168.1.36',
+    'wazuh agent': 'http://192.168.1.36',
+    iris: 'http://192.168.1.35:8000',
+    n8n: 'http://192.168.1.85:5678',
+    pfsense: 'http://192.168.1.1',
+  };
+
+  private readonly extraTools: ToolStatus[] = [
+    {
+      name: 'IRIS',
+      role: 'Incident Response Platform',
+      network: 'SOC',
+      ip: '192.168.1.35',
+      status: 'ONLINE',
+      icon: 'security',
+      metrics: [
+        { label: 'Cases Today', value: '14' },
+        { label: 'Open Cases', value: '27' },
+        { label: 'Pending Tasks', value: '9' },
+      ],
+    },
+    {
+      name: 'Wazuh Agent',
+      role: 'Endpoint Agent',
+      network: 'SOC',
+      ip: '192.168.1.36',
+      status: 'ONLINE',
+      icon: 'memory',
+      metrics: [
+        { label: 'Agents', value: '8' },
+        { label: 'Alerts Today', value: '342' },
+        { label: 'Active', value: 'Yes' },
+      ],
+    },
+  ];
+
   private destroy$ = new Subject<void>();
   private cdr = inject(ChangeDetectorRef);
   private toolsSvc = inject(ToolsService);
@@ -34,7 +73,8 @@ export class ToolsStatusComponent implements OnInit, OnDestroy {
   load(): void {
     this.loading = true;
     this.toolsSvc.getToolsStatus().pipe(takeUntil(this.destroy$)).subscribe(data => {
-      this.tools = data;
+      const visibleTools = data.filter(tool => this.getToolUrl(tool.name) !== undefined);
+      this.tools = this.mergeMissingTools(visibleTools);
       this.loading = false;
       this.lastUpdated = new Date().toLocaleTimeString('en-GB', { hour12: false });
       this.cdr.markForCheck();
@@ -47,21 +87,28 @@ export class ToolsStatusComponent implements OnInit, OnDestroy {
   }
 
   openTool(toolName: string): void {
-    const toolUrls: Record<string, string> = {
-      MISP: 'http://192.168.1.60',
-      Cortex: 'http://192.168.1.45:9001',
-      Wazuh: 'http://192.168.1.36',
-      IRIS: 'http://192.168.1.35:8000',
-      n8n: 'http://192.168.1.85:5678',
-      pfSense: 'http://192.168.1.1',
-    };
-
-    const url = toolUrls[toolName];
+    const url = this.getToolUrl(toolName);
     if (!url) {
       console.warn('Unknown tool name:', toolName);
       return;
     }
 
     window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  private getToolUrl(toolName: string): string | undefined {
+    const normalized = String(toolName || '').trim().toLowerCase();
+    const key = Object.keys(this.allowedToolLinks).find((entry) => normalized === entry || normalized.includes(entry));
+    return key ? this.allowedToolLinks[key] : undefined;
+  }
+
+  private mergeMissingTools(tools: ToolStatus[]): ToolStatus[] {
+    const existing = new Set(tools.map(tool => this.normalizeToolName(tool.name)));
+    const missing = this.extraTools.filter(tool => !existing.has(this.normalizeToolName(tool.name)));
+    return [...tools, ...missing];
+  }
+
+  private normalizeToolName(toolName: string): string {
+    return String(toolName || '').trim().toLowerCase();
   }
 }
