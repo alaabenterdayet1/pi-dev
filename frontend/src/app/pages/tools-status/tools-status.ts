@@ -27,35 +27,7 @@ export class ToolsStatusComponent implements OnInit, OnDestroy {
     n8n: 'http://192.168.1.85:5678',
     pfsense: 'http://192.168.1.1',
   };
-
-  private readonly extraTools: ToolStatus[] = [
-    {
-      name: 'IRIS',
-      role: 'Incident Response Platform',
-      network: 'SOC',
-      ip: '192.168.1.35',
-      status: 'ONLINE',
-      icon: 'security',
-      metrics: [
-        { label: 'Cases Today', value: '14' },
-        { label: 'Open Cases', value: '27' },
-        { label: 'Pending Tasks', value: '9' },
-      ],
-    },
-    {
-      name: 'Wazuh Agent',
-      role: 'Endpoint Agent',
-      network: 'SOC',
-      ip: '192.168.1.36',
-      status: 'ONLINE',
-      icon: 'memory',
-      metrics: [
-        { label: 'Agents', value: '8' },
-        { label: 'Alerts Today', value: '342' },
-        { label: 'Active', value: 'Yes' },
-      ],
-    },
-  ];
+  private readonly displayOrder = ['misp', 'wazuh', 'n8n', 'pfsense', 'cortex', 'iris', 'wazuh agent'];
 
   private destroy$ = new Subject<void>();
   private cdr = inject(ChangeDetectorRef);
@@ -64,6 +36,7 @@ export class ToolsStatusComponent implements OnInit, OnDestroy {
   tools: ToolStatus[] = [];
   loading = false;
   lastUpdated = '';
+  private expandedTools = new Set<string>();
 
   trackByName = (_: number, t: ToolStatus) => t.name;
 
@@ -74,7 +47,10 @@ export class ToolsStatusComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.toolsSvc.getToolsStatus().pipe(takeUntil(this.destroy$)).subscribe(data => {
       const visibleTools = data.filter(tool => this.getToolUrl(tool.name) !== undefined);
-      this.tools = this.mergeMissingTools(visibleTools);
+      this.tools = visibleTools.sort((a, b) => this.getSortRank(a.name) - this.getSortRank(b.name));
+      this.expandedTools = new Set(
+        Array.from(this.expandedTools).filter((name) => this.tools.some((tool) => tool.name === name))
+      );
       this.loading = false;
       this.lastUpdated = new Date().toLocaleTimeString('en-GB', { hour12: false });
       this.cdr.markForCheck();
@@ -96,19 +72,37 @@ export class ToolsStatusComponent implements OnInit, OnDestroy {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
+  getVisibleMetrics(tool: ToolStatus): ToolStatus['metrics'] {
+    if (this.isExpanded(tool.name)) return tool.metrics;
+    return tool.metrics.slice(0, 4);
+  }
+
+  hasMoreMetrics(tool: ToolStatus): boolean {
+    return tool.metrics.length > 4;
+  }
+
+  isExpanded(toolName: string): boolean {
+    return this.expandedTools.has(toolName);
+  }
+
+  toggleDetails(toolName: string): void {
+    if (this.expandedTools.has(toolName)) {
+      this.expandedTools.delete(toolName);
+    } else {
+      this.expandedTools.add(toolName);
+    }
+    this.cdr.markForCheck();
+  }
+
   private getToolUrl(toolName: string): string | undefined {
     const normalized = String(toolName || '').trim().toLowerCase();
     const key = Object.keys(this.allowedToolLinks).find((entry) => normalized === entry || normalized.includes(entry));
     return key ? this.allowedToolLinks[key] : undefined;
   }
 
-  private mergeMissingTools(tools: ToolStatus[]): ToolStatus[] {
-    const existing = new Set(tools.map(tool => this.normalizeToolName(tool.name)));
-    const missing = this.extraTools.filter(tool => !existing.has(this.normalizeToolName(tool.name)));
-    return [...tools, ...missing];
-  }
-
-  private normalizeToolName(toolName: string): string {
-    return String(toolName || '').trim().toLowerCase();
+  private getSortRank(toolName: string): number {
+    const normalized = String(toolName || '').trim().toLowerCase();
+    const idx = this.displayOrder.findIndex((entry) => normalized === entry || normalized.includes(entry));
+    return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
   }
 }

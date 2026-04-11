@@ -48,13 +48,19 @@
 
         <!-- Metrics -->
         <div class="tool-metrics">
-          @for (metric of tool.metrics; track metric.label) {
+          @for (metric of getVisibleMetrics(tool); track metric.label) {
             <div class="metric-item">
               <span class="metric-label text-secondary">{{ metric.label }}</span>
               <span class="metric-value mono">{{ metric.value }}</span>
             </div>
           }
         </div>
+
+        @if (hasMoreMetrics(tool)) {
+          <button mat-stroked-button class="btn-outline" (click)="toggleDetails(tool.name)">
+            {{ isExpanded(tool.name) ? 'Hide Details' : 'View More Details' }}
+          </button>
+        }
 
         <button mat-flat-button class="btn-cyan" (click)="openTool(tool.name)">Open Tool</button>
       </div>
