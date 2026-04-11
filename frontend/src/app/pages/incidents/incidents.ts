@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -31,7 +31,7 @@ import { TimeAgoPipe } from '../../shared/pipes/time-ago.pipe';
   templateUrl: './incidents.html',
   styleUrl: './incidents.css'
 })
-export class IncidentsComponent implements OnInit, OnDestroy {
+export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly detailOrder = [
     '_id',
     'rule_id',
@@ -81,6 +81,8 @@ export class IncidentsComponent implements OnInit, OnDestroy {
   displayedColumns = ['id','severity','type','asset','aiScore','decision','mttd','status','actions'];
   dataSource = new MatTableDataSource<Incident>([]);
   allIncidents: Incident[] = [];
+  pageSize = 20;
+  pageSizeOptions: number[] = [10, 20, 50];
   selectedIncident: Incident | null = null;
   selectedScore: AiScore | null = null;
   actionLoading = false;
@@ -104,6 +106,7 @@ export class IncidentsComponent implements OnInit, OnDestroy {
   ngAfterViewInit(): void {
     this.dataSource.sort = this.sort;
     this.dataSource.paginator = this.paginator;
+    this.refreshPaginationOptions();
   }
 
   ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); }
@@ -115,6 +118,44 @@ export class IncidentsComponent implements OnInit, OnDestroy {
       (!this.filters.asset || i.asset === this.filters.asset) &&
       (!this.filters.status || i.status === this.filters.status)
     );
+    this.refreshPaginationOptions();
+    if (this.paginator) this.paginator.firstPage();
+    this.cdr.markForCheck();
+  }
+
+  showAllHistory(): void {
+    if (!this.paginator) return;
+    const total = Math.max(1, this.dataSource.data.length);
+    this.pageSize = total;
+    this.paginator.pageSize = total;
+    this.refreshPaginationOptions();
+    this.paginator.firstPage();
+    this.cdr.markForCheck();
+  }
+
+  updateStatus(incident: Incident, status: Incident['status']): void {
+    if (incident.status === status) return;
+
+    const prev = incident.status;
+    incident.status = status;
+    if (this.selectedIncident?.id === incident.id) {
+      this.selectedIncident.status = status;
+    }
+    this.applyFilters();
+
+    this.incidentsSvc.updateIncidentStatus(incident.id, status).pipe(takeUntil(this.destroy$)).subscribe(result => {
+      if (!result.success) {
+        incident.status = prev;
+        if (this.selectedIncident?.id === incident.id) {
+          this.selectedIncident.status = prev;
+        }
+        this.applyFilters();
+        this.snack.open('Echec de mise a jour du statut', 'x', { panelClass: 'toast-error' });
+        return;
+      }
+
+      this.snack.open(`Statut mis a jour: ${status}`, '✓', { panelClass: 'toast-success' });
+    });
   }
 
   openDetail(inc: Incident): void {
@@ -186,5 +227,16 @@ export class IncidentsComponent implements OnInit, OnDestroy {
     const rows = this.dataSource.data.map(i => `${i.id},${i.severity},${i.type},${i.asset},${i.aiScore},${i.decision},${i.status},${i.mttd}`).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'historique.csv'; a.click();
+  }
+
+  private refreshPaginationOptions(): void {
+    const total = this.dataSource.data.length;
+    const options = [10, 20, 50];
+    if (total > 0) options.push(total);
+    this.pageSizeOptions = Array.from(new Set(options)).sort((a, b) => a - b);
+
+    if (this.pageSize > total && total > 0) {
+      this.pageSize = total;
+    }
   }
 }

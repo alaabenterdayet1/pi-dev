@@ -5,7 +5,8 @@
 .total-badge { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00D4FF; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2); border-radius: 12px; padding: 4px 12px; margin-left: auto; }
 
 .table-wrapper { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-.incidents-table { width: 100%; }
+.table-scroll { flex: 1; overflow: auto; }
+.incidents-table { width: 100%; min-width: 980px; }
 
 .score-cell { display: flex; flex-direction: column; gap: 4px; min-width: 80px; }
 .decision-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.08em; }
@@ -16,6 +17,8 @@
 .status-open { color: #FF4560; background: rgba(255,69,96,0.1); }
 .status-investigating { color: #FF8C00; background: rgba(255,140,0,0.1); }
 .status-closed { color: #64748B; background: rgba(100,116,139,0.1); }
+.status-select { width: 150px; font-size: 11px; }
+.drawer-status-select { width: 170px; font-size: 11px; }
 
 /* ─── Drawer ─────────────────────────────────────────────────────────────── */
 .detail-drawer { width: 380px; background: #0F1629 !important; border-left: 1px solid #1E2D4E !important; }
