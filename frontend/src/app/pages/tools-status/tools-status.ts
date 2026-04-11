@@ -45,4 +45,23 @@ export class ToolsStatusComponent implements OnInit, OnDestroy {
     const map: Record<string,string> = { ONLINE:'#00E396', WARNING:'#FFD700', OFFLINE:'#FF4560', DEGRADED:'#FF8C00' };
     return map[status] ?? '#64748B';
   }
+
+  openTool(toolName: string): void {
+    const toolUrls: Record<string, string> = {
+      MISP: 'http://192.168.1.60',
+      Cortex: 'http://192.168.1.45:9001',
+      Wazuh: 'http://192.168.1.36',
+      IRIS: 'http://192.168.1.35:8000',
+      n8n: 'http://192.168.1.85:5678',
+      pfSense: 'http://192.168.1.1',
+    };
+
+    const url = toolUrls[toolName];
+    if (!url) {
+      console.warn('Unknown tool name:', toolName);
+      return;
+    }
+
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
 }
