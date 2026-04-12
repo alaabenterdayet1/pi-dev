@@ -68,9 +68,14 @@ const classifyAlert = (alert) => {
 
 const enrichAlertWithAi = (alertDoc) => {
   const alert = typeof alertDoc.toObject === 'function' ? alertDoc.toObject() : alertDoc;
+  const ai = classifyAlert(alert);
   return {
     ...alert,
-    ...classifyAlert(alert),
+    ai_classification: alert.ai_classification || ai.ai_classification,
+    ai_decision: alert.ai_decision || ai.ai_decision,
+    ai_confidence: alert.ai_confidence ?? ai.ai_confidence,
+    ai_risk_score: alert.ai_risk_score ?? ai.ai_risk_score,
+    ai_recommendation: alert.ai_recommendation || ai.ai_recommendation,
   };
 };
 

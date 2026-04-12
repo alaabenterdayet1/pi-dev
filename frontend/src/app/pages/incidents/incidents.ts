@@ -78,7 +78,7 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
   private incidentsSvc = inject(IncidentsService);
   private snack = inject(MatSnackBar);
 
-  displayedColumns = ['id','severity','type','asset','aiScore','decision','mttd','status','actions'];
+  displayedColumns = ['arrivalDateTime','severity','confidence','type','asset','aiScore','decision','mttd','status','actions'];
   dataSource = new MatTableDataSource<Incident>([]);
   allIncidents: Incident[] = [];
   pageSize = 20;
@@ -113,7 +113,7 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   applyFilters(): void {
     this.dataSource.data = this.allIncidents.filter(i =>
-      (!this.filters.severity || i.severity === this.filters.severity) &&
+      (!this.filters.severity || this.normalizeSeverityValue(i.classificationSeverity || i.severity) === this.normalizeSeverityValue(this.filters.severity)) &&
       (!this.filters.type || i.type === this.filters.type) &&
       (!this.filters.asset || i.asset === this.filters.asset) &&
       (!this.filters.status || i.status === this.filters.status)
@@ -181,6 +181,10 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
   getScoreColor(s: number): string { return s >= 70 ? '#FF4560' : s >= 40 ? '#FF8C00' : '#00E396'; }
   trackById = (_: number, i: Incident) => i.id;
 
+  getDisplaySeverity(incident: Incident): string {
+    return incident.classificationSeverity || incident.severity;
+  }
+
   getAllDetailEntries(incident: Incident): Array<{ key: string; label: string; value: string; isLong: boolean }> {
     const source = incident.rawDetails ?? {};
     return Object.entries(source)
@@ -206,6 +210,10 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
     return a.localeCompare(b);
   }
 
+  private normalizeSeverityValue(value: string): string {
+    return String(value || '').trim().toUpperCase();
+  }
+
   private toReadableLabel(key: string): string {
     return key
       .replace(/_/g, ' ')
@@ -223,8 +231,10 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   exportCsv(): void {
-    const headers = 'ID,Severity,Type,Asset,Score,Decision,Status,MTTD\n';
-    const rows = this.dataSource.data.map(i => `${i.id},${i.severity},${i.type},${i.asset},${i.aiScore},${i.decision},${i.status},${i.mttd}`).join('\n');
+    const headers = 'Arrival DateTime,Severity,Confidence,Type,Asset,Score,Decision,Status,MTTD\n';
+    const rows = this.dataSource.data
+      .map(i => `${new Date(i.detectedAt).toLocaleString()},${i.classificationSeverity || i.severity},${i.classificationConfidence || i.confidenceRaw || ''},${i.type},${i.asset},${i.aiScore},${i.decision},${i.status},${i.mttd}`)
+      .join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'historique.csv'; a.click();
   }

@@ -1,11 +1,14 @@
 export interface Incident {
   id: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  classificationSeverity?: string;
   type: string;
   asset: string;
   aiScore: number;
   decision: 'ISOLATE' | 'ESCALATE' | 'MONITOR';
   confidence: number;
+  classificationConfidence?: string;
+  confidenceRaw?: number;
   status: 'OPEN' | 'INVESTIGATING' | 'CLOSED';
   mttd: number;
   detectedAt: string;

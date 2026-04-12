@@ -31,13 +31,17 @@
     <div class="table-wrapper glass-card">
       <div class="table-scroll">
         <table mat-table [dataSource]="dataSource" matSort class="incidents-table">
-          <ng-container matColumnDef="id">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>ID</th>
-            <td mat-cell *matCellDef="let row"><span class="mono text-cyan">{{ row.id }}</span></td>
+          <ng-container matColumnDef="arrivalDateTime">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>ARRIVEE (DATE/HEURE)</th>
+            <td mat-cell *matCellDef="let row"><span class="mono text-cyan">{{ row.detectedAt | date:'dd/MM/yyyy HH:mm:ss' }}</span></td>
           </ng-container>
           <ng-container matColumnDef="severity">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Severity</th>
-            <td mat-cell *matCellDef="let row"><app-severity-badge [severity]="row.severity"></app-severity-badge></td>
+            <td mat-cell *matCellDef="let row"><app-severity-badge [severity]="getDisplaySeverity(row)"></app-severity-badge></td>
+          </ng-container>
+          <ng-container matColumnDef="confidence">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Confidence</th>
+            <td mat-cell *matCellDef="let row" class="mono text-secondary">{{ row.classificationConfidence || (row.confidenceRaw | number:'1.3-6') }}</td>
           </ng-container>
           <ng-container matColumnDef="type">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Threat Type</th>
@@ -83,7 +87,7 @@
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class]="'border-' + row.severity.toLowerCase()"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" [class]="'border-' + getDisplaySeverity(row).toLowerCase()"></tr>
         </table>
       </div>
       <mat-paginator [pageSizeOptions]="pageSizeOptions" [pageSize]="pageSize" showFirstLastButtons></mat-paginator>
@@ -97,7 +101,7 @@
         <div class="drawer-header">
           <div>
             <div class="drawer-id mono">{{ selectedIncident.id }}</div>
-            <app-severity-badge [severity]="selectedIncident.severity"></app-severity-badge>
+            <app-severity-badge [severity]="getDisplaySeverity(selectedIncident)"></app-severity-badge>
           </div>
           <button mat-icon-button (click)="detailDrawer.close()"><mat-icon>close</mat-icon></button>
         </div>

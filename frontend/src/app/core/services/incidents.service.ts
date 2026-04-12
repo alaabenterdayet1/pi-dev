@@ -1,11 +1,16 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { Incident } from '../models/incident.model';
 import { AiScore } from '../models/ai-score.model';
 import { environment } from '../../../environments/environment';
 import { AlertItem, AlertsResponse } from '../models/alert.model';
+
+interface ClassificationItem {
+  severity?: string;
+  confidence?: string | number;
+}
 
 @Injectable({ providedIn: 'root' })
 export class IncidentsService {
@@ -26,8 +31,16 @@ export class IncidentsService {
   };
 
   getIncidents(): Observable<Incident[]> {
-    return this.http.get<AlertsResponse>(`${this.base}/alerts`).pipe(
-      map(res => (res.data ?? []).map((alert) => this.mapAlertToIncident(alert))),
+    return forkJoin({
+      alerts: this.http.get<AlertsResponse>(`${this.base}/alerts`),
+      classifications: this.http.get<{ data?: ClassificationItem[] }>(`${this.base}/alerts/classification`),
+    }).pipe(
+      map(({ alerts, classifications }) => {
+        const alertList = alerts.data ?? [];
+        const classificationList = classifications.data ?? [];
+
+        return alertList.map((alert, index) => this.mapAlertToIncident(alert, classificationList[index]));
+      }),
       catchError(() => this.http.get<Incident[]>('/assets/mock/incidents.json'))
     );
   }
@@ -77,19 +90,27 @@ export class IncidentsService {
     );
   }
 
-  private mapAlertToIncident(alert: AlertItem): Incident {
+  private mapAlertToIncident(alert: AlertItem, classification?: ClassificationItem): Incident {
     const mongoId = this.getAlertId(alert);
     const severity = this.toSeverity(alert);
     const decision = this.toDecision(alert, severity);
+    const confidenceRaw = this.toConfidenceRaw(alert);
+    const classificationSeverity = String(classification?.severity ?? '').trim();
+    const classificationConfidence = classification?.confidence !== undefined && classification?.confidence !== null
+      ? String(classification.confidence)
+      : undefined;
 
     return {
       id: mongoId,
       severity,
+      classificationSeverity,
       type: alert.rule_description || alert.iris_alert_title || 'Security Alert',
       asset: alert.agent_name || alert.src_ip || 'Unknown asset',
       aiScore: this.toScore(alert, severity),
       decision,
-      confidence: Math.max(40, Math.min(99, Number(alert.ai_confidence ?? 70))),
+      confidence: Math.round(confidenceRaw * 100),
+      classificationConfidence,
+      confidenceRaw,
       status: this.toStatus(alert),
       mttd: this.toMttd(alert),
       detectedAt: this.toDetectedAt(alert),
@@ -112,6 +133,9 @@ export class IncidentsService {
   }
 
   private toSeverity(alert: AlertItem): Incident['severity'] {
+    const dbSeverity = this.normalizeSeverity(alert.severity);
+    if (dbSeverity) return dbSeverity;
+
     const ai = alert.ai_classification;
     if (ai) return ai;
 
@@ -125,6 +149,36 @@ export class IncidentsService {
     if (level >= 8) return 'HIGH';
     if (level >= 5) return 'MEDIUM';
     return 'LOW';
+  }
+
+  private normalizeSeverity(value: unknown): Incident['severity'] | null {
+    const sev = String(value ?? '').trim().toUpperCase();
+    if (sev === 'CRITICAL') return 'CRITICAL';
+    if (sev === 'HIGH') return 'HIGH';
+    if (sev === 'MEDIUM') return 'MEDIUM';
+    if (sev === 'LOW') return 'LOW';
+    return null;
+  }
+
+  private toConfidenceRaw(alert: AlertItem): number {
+    const dbConfidence = this.asFiniteNumber(alert.confidence);
+    if (dbConfidence !== null) {
+      if (dbConfidence <= 1) return Math.max(0, Math.min(1, dbConfidence));
+      return Math.max(0, Math.min(1, dbConfidence / 100));
+    }
+
+    const aiConfidence = this.asFiniteNumber(alert.ai_confidence);
+    if (aiConfidence !== null) {
+      if (aiConfidence <= 1) return Math.max(0, Math.min(1, aiConfidence));
+      return Math.max(0, Math.min(1, aiConfidence / 100));
+    }
+
+    return 0.7;
+  }
+
+  private asFiniteNumber(value: unknown): number | null {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
   }
 
   private toDecision(alert: AlertItem, severity: Incident['severity']): Incident['decision'] {
@@ -166,10 +220,18 @@ export class IncidentsService {
   }
 
   private toDetectedAt(alert: AlertItem): string {
-    const id = this.getAlertId(alert);
-    const ts = Number.parseInt(id.slice(0, 8), 16);
-    if (Number.isNaN(ts)) return new Date().toISOString();
-    return new Date(ts * 1000).toISOString();
+    const candidate =
+      (alert as Record<string, unknown>)['@timestamp'] ??
+      (alert as Record<string, unknown>)['timestamp'] ??
+      (alert as Record<string, unknown>)['createdAt'] ??
+      (alert as Record<string, unknown>)['created_at'];
+
+    if (typeof candidate === 'string') {
+      const parsed = new Date(candidate);
+      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+    }
+
+    return new Date().toISOString();
   }
 
   private toIocs(alert: AlertItem): Incident['iocs'] {

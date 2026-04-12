@@ -30,6 +30,9 @@ export interface AlertItem {
   fw_source_blocked?: string;
   alert_status?: 'OPEN' | 'INVESTIGATING' | 'CLOSED';
 
+  severity?: string;
+  confidence?: number | string;
+
   ai_classification?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   ai_decision?: 'ISOLATE' | 'ESCALATE' | 'INVESTIGATE' | 'MONITOR';
   ai_confidence?: number;
