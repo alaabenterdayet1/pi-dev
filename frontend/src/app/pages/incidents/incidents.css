@@ -2,11 +2,38 @@
 .incidents-main { display: flex; flex-direction: column; gap: 14px; height: 100%; padding: 0; }
 .filter-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex-wrap: wrap; flex-shrink: 0; }
 .filter-select { width: 160px; }
+.filter-input {
+	width: 180px;
+	height: 36px;
+	padding: 0 12px;
+	border-radius: 8px;
+	border: 1px solid rgba(0, 212, 255, 0.2);
+	background: rgba(7, 11, 20, 0.85);
+	color: #E2E8F0;
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 12px;
+	outline: none;
+}
+.filter-input::placeholder { color: #64748B; }
+.filter-input:focus { border-color: rgba(0, 212, 255, 0.6); box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.12); }
 .total-badge { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #00D4FF; background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2); border-radius: 12px; padding: 4px 12px; margin-left: auto; }
 
 .table-wrapper { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 .table-scroll { flex: 1; overflow: auto; }
 .incidents-table { width: 100%; min-width: 980px; }
+
+.type-with-ip {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.target-ip-inline {
+	font-family: 'JetBrains Mono', monospace;
+	font-size: 11px;
+	color: #00D4FF;
+}
 
 .score-cell { display: flex; flex-direction: column; gap: 4px; min-width: 80px; }
 .decision-chip { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.08em; }

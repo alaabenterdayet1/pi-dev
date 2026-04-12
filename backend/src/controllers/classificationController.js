@@ -2,8 +2,15 @@ const Classification = require('../models/Classification');
 
 const getAllClassifications = async (req, res) => {
   try {
-    const limit = Math.max(1, Math.min(Number(req.query.limit) || 0, 500));
-    const query = Classification.find().sort({ _id: -1 });
+    const requested = Number(req.query.limit);
+    const limit = Number.isFinite(requested) && requested > 0
+      ? Math.min(Math.trunc(requested), 500)
+      : 0;
+    const query = Classification.find({
+      severity: { $nin: [null, ''] },
+      confidence: { $nin: [null, ''] },
+      status: { $regex: /^success\s*$/i },
+    }).sort({ _id: -1 });
 
     if (limit > 0) {
       query.limit(limit);

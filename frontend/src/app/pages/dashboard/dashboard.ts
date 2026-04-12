@@ -52,12 +52,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     'iris_alert_source',
     'fw_action_type',
     'fw_interface',
-    'fw_source_blocked',
-    'ai_classification',
-    'ai_decision',
-    'ai_confidence',
-    'ai_risk_score',
-    'ai_recommendation'
+    'fw_source_blocked'
   ];
 
   private destroy$ = new Subject<void>();
@@ -132,19 +127,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   getAlertSeverity(alert: AlertItem): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
-    if (alert.ai_classification) return alert.ai_classification;
+    const dbSeverity = (alert.severity || '').toLowerCase();
+    if (dbSeverity === 'critical') return 'CRITICAL';
+    if (dbSeverity === 'high') return 'HIGH';
+    if (dbSeverity === 'medium') return 'MEDIUM';
+    if (dbSeverity === 'low' || dbSeverity === 'informational' || dbSeverity === 'info') return 'LOW';
 
-    const named = (alert.iris_severity_name || '').toLowerCase();
-    if (named === 'critical') return 'CRITICAL';
-    if (named === 'high') return 'HIGH';
-    if (named === 'medium') return 'MEDIUM';
-    if (named === 'low' || named === 'informational' || named === 'info') return 'LOW';
-
-    const level = alert.rule_level ?? 0;
-    if (level >= 12) return 'CRITICAL';
-    if (level >= 8) return 'HIGH';
-    if (level >= 5) return 'MEDIUM';
     return 'LOW';
+  }
+
+  getAlertConfidence(alert: AlertItem): string {
+    if (alert.confidence === undefined || alert.confidence === null) return 'N/A';
+    const value = String(alert.confidence).trim();
+    return value || 'N/A';
   }
 
   getAlertTime(alert: AlertItem): Date {
@@ -224,16 +219,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private toReadableLabel(key: string): string {
-    const labels = new Map<string, string>([
-      ['ai_classification', 'AI Classification'],
-      ['ai_decision', 'AI Decision'],
-      ['ai_confidence', 'AI Confidence (%)'],
-      ['ai_risk_score', 'AI Risk Score'],
-      ['ai_recommendation', 'AI Recommendation'],
-    ]);
-    const special = labels.get(key);
-    if (special) return special;
-
     return key
       .replace(/_/g, ' ')
       .replace(/\b\w/g, c => c.toUpperCase());

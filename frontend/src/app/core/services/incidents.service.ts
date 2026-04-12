@@ -104,6 +104,7 @@ export class IncidentsService {
       id: mongoId,
       severity,
       classificationSeverity,
+      targetIp: alert.src_ip || '',
       type: alert.rule_description || alert.iris_alert_title || 'Security Alert',
       asset: alert.agent_name || alert.src_ip || 'Unknown asset',
       aiScore: this.toScore(alert, severity),
@@ -240,6 +241,10 @@ export class IncidentsService {
     if (alert.mitre_ids) iocs.push({ type: 'BEHAVIOR', value: `MITRE ${alert.mitre_ids}` });
     if (alert.cortex_taxonomies) iocs.push({ type: 'BEHAVIOR', value: alert.cortex_taxonomies });
     return iocs;
+  }
+
+  private getTargetIp(incident: Incident): string {
+    return String(incident.targetIp || incident.rawDetails?.['src_ip'] || '').trim();
   }
 
   private toTimeline(alert: AlertItem): Incident['timeline'] {

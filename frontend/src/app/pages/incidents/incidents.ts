@@ -83,11 +83,12 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
   allIncidents: Incident[] = [];
   pageSize = 20;
   pageSizeOptions: number[] = [10, 20, 50];
+  showAllMode = false;
   selectedIncident: Incident | null = null;
   selectedScore: AiScore | null = null;
   actionLoading = false;
 
-  filters = { severity: '', type: '', asset: '', status: '' };
+  filters = { severity: '', type: '', asset: '', status: '', ip: '' };
   severities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
   types: string[] = [];
   assets: string[] = [];
@@ -116,21 +117,23 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
       (!this.filters.severity || this.normalizeSeverityValue(i.classificationSeverity || i.severity) === this.normalizeSeverityValue(this.filters.severity)) &&
       (!this.filters.type || i.type === this.filters.type) &&
       (!this.filters.asset || i.asset === this.filters.asset) &&
-      (!this.filters.status || i.status === this.filters.status)
+      (!this.filters.status || i.status === this.filters.status) &&
+      (!this.filters.ip || this.matchesIpFilter(i, this.filters.ip))
     );
+    this.dataSource.paginator = this.showAllMode ? null : this.paginator;
     this.refreshPaginationOptions();
     if (this.paginator) this.paginator.firstPage();
     this.cdr.markForCheck();
   }
 
   showAllHistory(): void {
-    if (!this.paginator) return;
-    const total = Math.max(1, this.dataSource.data.length);
-    this.pageSize = total;
-    this.paginator.pageSize = total;
+    this.showAllMode = true;
+    this.filters = { severity: '', type: '', asset: '', status: '', ip: '' };
+    this.dataSource.data = this.allIncidents;
+    this.dataSource.paginator = null;
+    this.pageSize = Math.max(1, this.allIncidents.length);
     this.refreshPaginationOptions();
-    this.paginator.firstPage();
-    this.cdr.markForCheck();
+    this.cdr.detectChanges();
   }
 
   updateStatus(incident: Incident, status: Incident['status']): void {
@@ -212,6 +215,14 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private normalizeSeverityValue(value: string): string {
     return String(value || '').trim().toUpperCase();
+  }
+
+  private matchesIpFilter(incident: Incident, value: string): boolean {
+    const filter = String(value || '').trim().toLowerCase();
+    if (!filter) return true;
+
+    const targetIp = String((incident.targetIp || incident.rawDetails?.['src_ip'] || '')).toLowerCase();
+    return targetIp.includes(filter);
   }
 
   private toReadableLabel(key: string): string {

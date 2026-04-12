@@ -3,20 +3,30 @@ const path = require('path');
 const fs = require('fs/promises');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
-const { enrichAlertsWithAi, classifyAlert } = require('../services/alertAiService');
+const { classifyAlert } = require('../services/alertAiService');
 
 const execFileAsync = promisify(execFile);
+
+const stripAiFields = (alertDoc) => {
+  const alert = typeof alertDoc.toObject === 'function' ? alertDoc.toObject() : { ...alertDoc };
+  delete alert.ai_classification;
+  delete alert.ai_decision;
+  delete alert.ai_confidence;
+  delete alert.ai_risk_score;
+  delete alert.ai_recommendation;
+  return alert;
+};
 
 const getLatestAlerts = async (req, res) => {
   try {
     const limit = Math.max(1, Math.min(Number(req.query.limit) || 5, 50));
     const alerts = await Alert.find().sort({ _id: -1 }).limit(limit);
-    const enrichedAlerts = enrichAlertsWithAi(alerts);
+    const sanitizedAlerts = alerts.map(stripAiFields);
 
     res.status(200).json({
-      count: enrichedAlerts.length,
+      count: sanitizedAlerts.length,
       limit,
-      data: enrichedAlerts,
+      data: sanitizedAlerts,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -26,11 +36,11 @@ const getLatestAlerts = async (req, res) => {
 const getAllAlerts = async (req, res) => {
   try {
     const alerts = await Alert.find().sort({ _id: -1 });
-    const enrichedAlerts = enrichAlertsWithAi(alerts);
+    const sanitizedAlerts = alerts.map(stripAiFields);
 
     res.status(200).json({
-      count: enrichedAlerts.length,
-      data: enrichedAlerts,
+      count: sanitizedAlerts.length,
+      data: sanitizedAlerts,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

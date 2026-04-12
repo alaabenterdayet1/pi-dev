@@ -19,6 +19,13 @@
         <mat-option value="">All Statuses</mat-option>
         @for (s of statuses; track s) { <mat-option [value]="s">{{ s }}</mat-option> }
       </mat-select>
+      <input
+        type="text"
+        [(ngModel)]="filters.ip"
+        (ngModelChange)="applyFilters()"
+        placeholder="Target IP"
+        class="filter-input"
+      />
       <button mat-flat-button class="btn-cyan" (click)="applyFilters()">APPLY</button>
       <div class="total-badge">{{ dataSource.data.length }} HISTORIQUE</div>
       <button mat-flat-button class="btn-cyan" (click)="showAllHistory()">TOUT AFFICHER</button>
@@ -45,7 +52,12 @@
           </ng-container>
           <ng-container matColumnDef="type">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Threat Type</th>
-            <td mat-cell *matCellDef="let row">{{ row.type }}</td>
+            <td mat-cell *matCellDef="let row">
+              <div class="type-with-ip">
+                <span>{{ row.type }}</span>
+                <span class="target-ip-inline">Target IP: {{ row.targetIp || row.rawDetails?.src_ip || '-' }}</span>
+              </div>
+            </td>
           </ng-container>
           <ng-container matColumnDef="asset">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Asset</th>

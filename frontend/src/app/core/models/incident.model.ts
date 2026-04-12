@@ -2,6 +2,7 @@ export interface Incident {
   id: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   classificationSeverity?: string;
+  targetIp?: string;
   type: string;
   asset: string;
   aiScore: number;
