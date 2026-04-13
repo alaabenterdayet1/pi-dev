@@ -183,6 +183,37 @@
 .bg-low { background: #00E396; }
 .sev-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #64748B; min-width: 20px; text-align: right; }
 
+.model-validation-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.model-validation-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  background: rgba(15, 22, 41, 0.5);
+}
+
+.model-validation-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #64748B;
+  letter-spacing: 0.05em;
+}
+
+.model-validation-value {
+  font-size: 11px;
+  color: #E2E8F0;
+  text-align: right;
+  word-break: break-word;
+}
+
 /* ─── Infra List ─────────────────────────────────────────────────────────── */
 .infra-list { display: flex; flex-direction: column; gap: 4px; }
 .infra-item { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 6px; text-decoration: none; cursor: pointer; transition: background 0.2s; }

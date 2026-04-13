@@ -67,6 +67,7 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
     'ai_confidence',
     'ai_risk_score',
     'ai_recommendation',
+    'mttr_minutes',
   ];
 
   @ViewChild(MatSort) sort!: MatSort;
@@ -78,7 +79,7 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
   private incidentsSvc = inject(IncidentsService);
   private snack = inject(MatSnackBar);
 
-  displayedColumns = ['arrivalDateTime','severity','confidence','type','asset','aiScore','decision','mttd','status','actions'];
+  displayedColumns = ['arrivalDateTime','severity','confidence','type','asset','aiScore','decision','mttd','mttr','status','actions'];
   dataSource = new MatTableDataSource<Incident>([]);
   allIncidents: Incident[] = [];
   pageSize = 20;
@@ -431,9 +432,9 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   exportCsv(): void {
-    const headers = 'Arrival DateTime,Severity,Confidence,Type,Asset,Score,Decision,Status,MTTD\n';
+    const headers = 'Arrival DateTime,Severity,Confidence,Type,Asset,Score,Decision,Status,MTTD,MTTR\n';
     const rows = this.dataSource.data
-      .map(i => `${new Date(i.detectedAt).toLocaleString()},${i.classificationSeverity || i.severity},${i.classificationConfidence || i.confidenceRaw || ''},${i.type},${i.asset},${i.aiScore},${i.decision},${i.status},${i.mttd}`)
+      .map(i => `${new Date(i.detectedAt).toLocaleString()},${i.classificationSeverity || i.severity},${i.classificationConfidence || i.confidenceRaw || ''},${i.type},${i.asset},${i.aiScore},${i.decision},${i.status},${i.mttd},${i.mttr}`)
       .join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'historique.csv'; a.click();

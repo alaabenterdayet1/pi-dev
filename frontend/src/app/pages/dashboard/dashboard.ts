@@ -8,11 +8,14 @@ import { takeUntil, switchMap, startWith } from 'rxjs/operators';
 import { AlertsService } from '../../core/services/alerts.service';
 import { KpiService } from '../../core/services/kpi.service';
 import { ToolsService } from '../../core/services/tools.service';
+import { AiScoringService } from '../../core/services/ai-scoring.service';
 import { AlertItem } from '../../core/models/alert.model';
 import { KpiData, ThreatDistribution } from '../../core/models/kpi.model';
 import { ToolStatus } from '../../core/models/tool-status.model';
+import { PipelineSummary } from '../../core/models/ai-score.model';
 import { SeverityBadgeComponent } from '../../shared/components/severity-badge/severity-badge';
 import { TimeAgoPipe } from '../../shared/pipes/time-ago.pipe';
+import { buildAlertSparkline, getAlertMttd, getAlertMttr } from '../../core/utils/alert-metrics.util';
 
 @Component({
   selector: 'app-dashboard',
@@ -61,17 +64,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private alertsSvc = inject(AlertsService);
   private kpiSvc = inject(KpiService);
   private toolsSvc = inject(ToolsService);
+  private aiScoringSvc = inject(AiScoringService);
 
   alerts: AlertItem[] = [];
   allAlerts: AlertItem[] = [];
   selectedAlert: AlertItem | null = null;
   showFullDetails = false;
   kpis: KpiData | null = null;
+  pipelineSummary: PipelineSummary | null = null;
   threatDist: ThreatDistribution | null = null;
   tools: ToolStatus[] = [];
   donutChart: any = {};
   mttdSparkline: any = {};
   mttrSparkline: any = {};
+  selectedAlertMttdSparkline: any = {};
+  selectedAlertMttrSparkline: any = {};
 
   trackByAlertId = (_: number, item: AlertItem) => this.getAlertId(item);
   trackByName = (_: number, t: ToolStatus) => t.name;
@@ -95,6 +102,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
 
     this.kpiSvc.getKpis().pipe(takeUntil(this.destroy$)).subscribe(k => { this.kpis = k; this.buildSparklines(k); this.cdr.markForCheck(); });
+    this.aiScoringSvc.getPipelineSummary().pipe(takeUntil(this.destroy$)).subscribe(summary => {
+      this.pipelineSummary = summary;
+      this.cdr.markForCheck();
+    });
     this.kpiSvc.getThreatDistribution().pipe(takeUntil(this.destroy$)).subscribe(d => {
       this.threatDist = d;
       this.buildDonut(d);
@@ -111,6 +122,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectAlert(alert: AlertItem): void {
     this.selectedAlert = alert;
     this.showFullDetails = false;
+    this.buildSelectedAlertSparklines(alert);
   }
 
   toggleFullDetails(): void {
@@ -303,8 +315,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const aiClass = String(alert.ai_classification || '').trim().toLowerCase();
     if (aiClass === 'critical') return 'CRITICAL';
     if (aiClass === 'high') return 'HIGH';
-    if (aiClass === 'medium') return 'MEDIUM';
+    if (aiClass === 'medium' || aiClass === 'meduim') return 'MEDIUM';
     if (aiClass === 'low' || aiClass === 'informational' || aiClass === 'info') return 'LOW';
+
+    const irisSeverity = String(alert.iris_severity_name || '').trim().toLowerCase();
+    if (irisSeverity === 'critical') return 'CRITICAL';
+    if (irisSeverity === 'high') return 'HIGH';
+    if (irisSeverity === 'medium' || irisSeverity === 'meduim') return 'MEDIUM';
+    if (irisSeverity === 'low' || irisSeverity === 'informational' || irisSeverity === 'info') return 'LOW';
 
     const aiScore = Number(alert.ai_risk_score);
     if (Number.isFinite(aiScore)) {
@@ -317,7 +335,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const dbSeverity = (alert.severity || '').toLowerCase();
     if (dbSeverity === 'critical') return 'CRITICAL';
     if (dbSeverity === 'high') return 'HIGH';
-    if (dbSeverity === 'medium') return 'MEDIUM';
+    if (dbSeverity === 'medium' || dbSeverity === 'meduim') return 'MEDIUM';
     if (dbSeverity === 'low' || dbSeverity === 'informational' || dbSeverity === 'info') return 'LOW';
 
     return 'LOW';
@@ -384,8 +402,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return new Set(source.map(a => a.src_ip).filter(Boolean)).size;
   }
 
+  get modelValidationRows(): Array<{ label: string; value: string }> {
+    const summary = this.pipelineSummary;
+    if (!summary) return [];
+
+    return [
+      { label: 'model_type', value: summary.modelType },
+      { label: 'model_source', value: summary.modelSource },
+      { label: 'accuracy', value: summary.metrics.modelAccuracy.toFixed(4) },
+      { label: 'r2', value: summary.metrics.r2Score.toFixed(4) },
+      { label: 'mae', value: summary.metrics.mae.toFixed(2) },
+      { label: 'fpr', value: summary.metrics.falsePositiveRate.toFixed(4) },
+      { label: 'precision_critical', value: summary.metrics.precisionCritical.toFixed(4) },
+      { label: 'avg_ai_score', value: summary.statistics.avgAiScore.toFixed(2) },
+    ];
+  }
+
   get detailsButtonLabel(): string {
     return this.showFullDetails ? 'Masquer les détails' : 'Voir tous les détails';
+  }
+
+  get selectedAlertMttd(): number {
+    if (this.selectedAlert) return getAlertMttd(this.selectedAlert);
+    return this.kpis?.mttd ?? 0;
+  }
+
+  get selectedAlertMttr(): number {
+    if (this.selectedAlert) return getAlertMttr(this.selectedAlert);
+    return this.kpis?.mttr ?? 0;
   }
 
   get allDetailEntries(): Array<{ key: string; label: string; value: string; isLong: boolean }> {
@@ -459,6 +503,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const base = { chart: { type: 'line', height: 40, sparkline: { enabled: true }, background: 'transparent' }, stroke: { curve: 'smooth', width: 2 }, theme: { mode: 'dark' }, tooltip: { enabled: false } };
     this.mttdSparkline = { ...base, series: [{ data: k.mttdSparkline }], colors: ['#00D4FF'] };
     this.mttrSparkline = { ...base, series: [{ data: k.mttrSparkline }], colors: ['#6366F1'] };
+  }
+
+  private buildSelectedAlertSparklines(alert: AlertItem): void {
+    const base = { chart: { type: 'line', height: 40, sparkline: { enabled: true }, background: 'transparent' }, stroke: { curve: 'smooth', width: 2 }, theme: { mode: 'dark' }, tooltip: { enabled: false } };
+    const alertId = this.getAlertId(alert) || 'alert';
+    const mttd = getAlertMttd(alert);
+    const mttr = getAlertMttr(alert);
+
+    this.selectedAlertMttdSparkline = { ...base, series: [{ data: buildAlertSparkline(mttd, `${alertId}-mttd`) }], colors: ['#00D4FF'] };
+    this.selectedAlertMttrSparkline = { ...base, series: [{ data: buildAlertSparkline(mttr, `${alertId}-mttr`) }], colors: ['#6366F1'] };
   }
 
   private isVisibleTool(toolName: string): boolean {

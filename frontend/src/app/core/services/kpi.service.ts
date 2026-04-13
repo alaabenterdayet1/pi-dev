@@ -35,7 +35,6 @@ export class KpiService {
     return this.http.get<any>(`${this.base}/ai/pipeline-summary`).pipe(
       map(summary => this.mapPipelineSummaryToKpi(summary)),
       catchError(() => of(this.fallbackKpi))
-      ))
     );
   }
 
@@ -97,6 +96,6 @@ export class KpiService {
     return {
       donut: donut.length > 0 ? donut : this.fallbackDist.donut,
       bySeverity: bySeverity.some(s => s.count > 0) ? bySeverity : this.fallbackDist.bySeverity
-    );
+    };
   }
 }

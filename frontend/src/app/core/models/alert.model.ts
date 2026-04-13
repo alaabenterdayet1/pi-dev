@@ -59,6 +59,7 @@ export interface AlertItem {
   ai_risk_score?: number;
   ai_recommendation?: string;
   mttd_minutes?: number;
+  mttr_minutes?: number;
 }
 
 export interface AlertsResponse {

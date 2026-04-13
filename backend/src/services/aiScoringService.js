@@ -33,6 +33,16 @@ const normalizeId = (value) => {
   return String(value).trim();
 };
 
+const normalizeSeverity = (value) => {
+  const severity = String(value || '').trim().toUpperCase();
+  if (severity === 'MEDUIM') return 'MEDIUM';
+  if (severity === 'INFORMATIONAL' || severity === 'INFO') return 'LOW';
+  if (severity === 'CRITICAL' || severity === 'HIGH' || severity === 'MEDIUM' || severity === 'LOW') {
+    return severity;
+  }
+  return value;
+};
+
 const buildAlertReportMap = async () => {
   const report = await readReport();
   const alerts = Array.isArray(report.alerts) ? report.alerts : [];
@@ -59,14 +69,14 @@ const mapReportToAlert = (alertDoc, reportAlert) => {
 
   return {
     ...alert,
-    ai_classification: reportAlert.severity_name ? String(reportAlert.severity_name).trim().toUpperCase() : alert.ai_classification,
+    ai_classification: reportAlert.severity_name ? normalizeSeverity(reportAlert.severity_name) : alert.ai_classification,
     ai_decision: reportAlert.ai_decision ?? alert.ai_decision,
     ai_confidence: reportAlert.ai_confidence ?? alert.ai_confidence,
     ai_risk_score: reportAlert.ai_risk_score ?? alert.ai_risk_score,
     ai_recommendation: reportAlert.ai_recommendation ?? alert.ai_recommendation,
     mttd_minutes: reportAlert.mttd_minutes ?? alert.mttd_minutes,
     mttr_minutes: reportAlert.mttr_minutes ?? alert.mttr_minutes,
-    severity: reportAlert.severity_name ?? alert.severity,
+    severity: normalizeSeverity(reportAlert.severity_name ?? alert.severity),
   };
 };
 

@@ -82,14 +82,14 @@ export class AiScoringComponent implements OnInit, OnDestroy {
     if (!s) return [];
 
     return [
-      { label: 'Model Accuracy (R²)', value: s.metrics.modelAccuracy.toFixed(2), tone: '#00D4FF' },
-      { label: 'False Positive Rate', value: s.metrics.falsePositiveRate.toFixed(2), tone: '#FF8C00' },
-      { label: 'Precision (Critical)', value: s.metrics.precisionCritical.toFixed(2), tone: '#00E396' },
-      { label: 'Avg MTTD (min)', value: s.statistics.avgMttdMinutes.toFixed(2), tone: '#FFD700' },
-      { label: 'Avg MTTR (min)', value: s.statistics.avgMttrMinutes.toFixed(2), tone: '#FF4560' },
+      { label: 'Model Type', value: s.modelType, tone: '#E2E8F0' },
+      { label: 'Model Source', value: s.modelSource, tone: '#94A3B8' },
+      { label: 'Accuracy', value: s.metrics.modelAccuracy.toFixed(4), tone: '#00D4FF' },
+      { label: 'R² Score', value: s.metrics.r2Score.toFixed(4), tone: '#22D3EE' },
+      { label: 'MAE', value: s.metrics.mae.toFixed(2), tone: '#F59E0B' },
+      { label: 'FPR', value: s.metrics.falsePositiveRate.toFixed(4), tone: '#FF8C00' },
+      { label: 'Precision Critical', value: s.metrics.precisionCritical.toFixed(4), tone: '#00E396' },
       { label: 'Avg AI Score', value: s.statistics.avgAiScore.toFixed(2), tone: '#6366F1' },
-      { label: 'Training Rows', value: `${s.trainingDataset.totalRows}`, tone: '#94A3B8' },
-      { label: 'Alerts Scored', value: `${s.statistics.totalAlerts}`, tone: '#E2E8F0' },
     ];
   }
 
@@ -124,7 +124,7 @@ export class AiScoringComponent implements OnInit, OnDestroy {
       { label: 'CONFIDENCE', value: `${this.selectedIncident.confidence}%`, tone: '#00D4FF' },
       { label: 'DECISION', value: this.selectedIncident.decision, tone: '#6366F1' },
       { label: 'MTTD', value: `${this.selectedIncident.mttd}m`, tone: '#FF8C00' },
-      { label: 'MTTR', value: `${this.estimateMttr(this.selectedIncident)}m`, tone: '#FF4560' },
+      { label: 'MTTR', value: `${this.selectedIncident.mttr}m`, tone: '#FF4560' },
       { label: 'STATUS', value: this.selectedIncident.status, tone: '#00E396' },
     ];
   }
@@ -240,7 +240,7 @@ export class AiScoringComponent implements OnInit, OnDestroy {
     const score = this.selectedIncident.aiScore;
     const confidence = this.selectedIncident.confidence;
     const mttd = Number(this.selectedIncident.mttd || 0);
-    const mttr = this.estimateMttr(this.selectedIncident);
+    const mttr = Number(this.selectedIncident.mttr || 0);
 
     this.kpiChart = {
       series: [
@@ -327,14 +327,6 @@ export class AiScoringComponent implements OnInit, OnDestroy {
       grid: { borderColor: '#1E2D4E' },
       theme: { mode: 'dark' }
     };
-  }
-
-  private estimateMttr(incident: Incident): number {
-    const fromRaw = Number(incident.rawDetails?.['mttr_minutes']);
-    if (Number.isFinite(fromRaw) && fromRaw > 0) return Math.round(fromRaw * 10) / 10;
-    const baseline = incident.decision === 'INVESTIGATE' ? 20 : incident.decision === 'ESCALATE' ? 35 : 12;
-    const derived = baseline + Math.round((incident.aiScore / 100) * 18);
-    return Math.round(derived * 10) / 10;
   }
 
   private toText(value: unknown): string {

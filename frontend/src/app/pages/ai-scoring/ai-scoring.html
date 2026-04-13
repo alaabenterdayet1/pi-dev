@@ -195,6 +195,7 @@
                 <th>Asset</th>
                 <th>Score</th>
                 <th>MTTD</th>
+                <th>MTTR</th>
               </tr>
             </thead>
             <tbody>
@@ -205,10 +206,11 @@
                   <td>{{ incident.asset }}</td>
                   <td class="mono" [style.color]="getScoreColor(incident.aiScore)">{{ incident.aiScore }}</td>
                   <td class="mono">{{ incident.mttd }}m</td>
+                  <td class="mono">{{ incident.mttr }}m</td>
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="5" class="empty-row">Aucune alerte pour {{ activeSeverity }}.</td>
+                  <td colspan="6" class="empty-row">Aucune alerte pour {{ activeSeverity }}.</td>
                 </tr>
               }
             </tbody>

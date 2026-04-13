@@ -12,6 +12,7 @@ export interface Incident {
   confidenceRaw?: number;
   status: 'OPEN' | 'INVESTIGATING' | 'CLOSED';
   mttd: number;
+  mttr: number;
   detectedAt: string;
   iocs?: IOC[];
   timeline?: TimelineEvent[];

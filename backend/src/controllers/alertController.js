@@ -153,6 +153,7 @@ const runPythonWithFallback = async (scriptPath, args) => {
 const runAlertScoringPipeline = async (req, res) => {
   try {
     const writeBack = String(req.query.writeBack || req.body?.writeBack || 'false').toLowerCase() === 'true';
+    const retrainClassifier = String(req.query.retrainClassifier || req.body?.retrainClassifier || 'true').toLowerCase() !== 'false';
     const syntheticSize = Math.max(
       1000,
       Number(req.query.syntheticSize || req.body?.syntheticSize) || 1200
@@ -173,6 +174,7 @@ const runAlertScoringPipeline = async (req, res) => {
     ];
     if (mongoUri) args.push('--mongo-uri', mongoUri);
     if (writeBack) args.push('--write-back');
+    if (retrainClassifier) args.push('--retrain-classifier');
 
     const { stdout, stderr } = await runPythonWithFallback(scriptPath, args);
     const reportRaw = await fs.readFile(reportPath, 'utf-8');
@@ -181,6 +183,7 @@ const runAlertScoringPipeline = async (req, res) => {
     res.status(200).json({
       message: 'AI scoring pipeline executed successfully',
       writeBack,
+      retrainClassifier,
       syntheticSize,
       report,
       runtime: {

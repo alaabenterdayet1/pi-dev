@@ -169,13 +169,13 @@
       <div class="kpi-grid">
         <div class="kpi-card glass-card">
           <div class="kpi-label">MTTD</div>
-          <div class="kpi-value mono text-cyan">{{ kpis.mttd }} <span class="kpi-unit">min</span></div>
-          <apx-chart [series]="mttdSparkline.series" [chart]="mttdSparkline.chart" [stroke]="mttdSparkline.stroke" [colors]="mttdSparkline.colors" [theme]="mttdSparkline.theme" [tooltip]="mttdSparkline.tooltip"></apx-chart>
+          <div class="kpi-value mono text-cyan">{{ selectedAlertMttd }} <span class="kpi-unit">min</span></div>
+          <apx-chart [series]="selectedAlertMttdSparkline.series" [chart]="selectedAlertMttdSparkline.chart" [stroke]="selectedAlertMttdSparkline.stroke" [colors]="selectedAlertMttdSparkline.colors" [theme]="selectedAlertMttdSparkline.theme" [tooltip]="selectedAlertMttdSparkline.tooltip"></apx-chart>
         </div>
         <div class="kpi-card glass-card">
           <div class="kpi-label">MTTR</div>
-          <div class="kpi-value mono" style="color:#6366F1">{{ kpis.mttr }} <span class="kpi-unit">min</span></div>
-          <apx-chart [series]="mttrSparkline.series" [chart]="mttrSparkline.chart" [stroke]="mttrSparkline.stroke" [colors]="mttrSparkline.colors" [theme]="mttrSparkline.theme" [tooltip]="mttrSparkline.tooltip"></apx-chart>
+          <div class="kpi-value mono" style="color:#6366F1">{{ selectedAlertMttr }} <span class="kpi-unit">min</span></div>
+          <apx-chart [series]="selectedAlertMttrSparkline.series" [chart]="selectedAlertMttrSparkline.chart" [stroke]="selectedAlertMttrSparkline.stroke" [colors]="selectedAlertMttrSparkline.colors" [theme]="selectedAlertMttrSparkline.theme" [tooltip]="selectedAlertMttrSparkline.tooltip"></apx-chart>
         </div>
         <div class="kpi-card glass-card">
           <div class="kpi-label">FALSE POSITIVE RATE</div>
@@ -208,6 +208,24 @@
 
   <!-- RIGHT COLUMN -->
   <div class="col-right">
+    @if (pipelineSummary) {
+      <div class="glass-card right-card">
+        <div class="section-header">
+          <span class="material-icons" style="color:#22D3EE">verified</span>
+          <span class="section-title">MODEL VALIDATION</span>
+        </div>
+
+        <div class="model-validation-grid">
+          @for (row of modelValidationRows; track trackByLabel($index, row)) {
+            <div class="model-validation-item">
+              <span class="model-validation-label">{{ row.label }}</span>
+              <span class="model-validation-value mono">{{ row.value }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
     <div class="glass-card right-card">
       <div class="section-header">
         <span class="material-icons" style="color:#00D4FF">donut_large</span>

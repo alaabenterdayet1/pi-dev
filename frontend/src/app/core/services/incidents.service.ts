@@ -6,6 +6,7 @@ import { Incident } from '../models/incident.model';
 import { AiScore } from '../models/ai-score.model';
 import { environment } from '../../../environments/environment';
 import { AlertItem, AlertsResponse } from '../models/alert.model';
+import { getAlertMttd, getAlertMttr } from '../utils/alert-metrics.util';
 
 interface ClassificationItem {
   severity?: string;
@@ -123,7 +124,7 @@ export class IncidentsService {
       this.pickFirstString([alert.log_program]),
     ]) || 'Asset non renseigne en DB';
 
-    const classificationSeverity = String(alert.ai_classification ?? classification?.severity ?? '').trim();
+    const classificationSeverity = String(alert.ai_classification ?? classification?.severity ?? alert.iris_severity_name ?? '').trim();
     const aiScore = this.toScore(alert, rawSeverity);
     const scoreSeverity = this.scoreToSeverity(aiScore);
     const sourceSeverity = this.normalizeSeverity(classificationSeverity) ?? this.normalizeSeverity(alert.ai_classification) ?? rawSeverity;
@@ -147,7 +148,8 @@ export class IncidentsService {
       classificationConfidence,
       confidenceRaw,
       status: this.toStatus(alert),
-      mttd: this.toMttd(alert),
+      mttd: getAlertMttd(alert),
+      mttr: getAlertMttr(alert),
       detectedAt: this.toDetectedAt(alert),
       assignee: userIdentity,
       iocs: this.toIocs(alert),
@@ -168,16 +170,14 @@ export class IncidentsService {
   }
 
   private toSeverity(alert: AlertItem): Incident['severity'] {
+    const irisSeverity = this.normalizeSeverity(alert.iris_severity_name);
+    if (irisSeverity) return irisSeverity;
+
     const dbSeverity = this.normalizeSeverity(alert.severity);
     if (dbSeverity) return dbSeverity;
 
     const ai = alert.ai_classification;
     if (ai) return ai;
-
-    const named = (alert.iris_severity_name || '').toLowerCase();
-    if (named === 'critical') return 'CRITICAL';
-    if (named === 'high') return 'HIGH';
-    if (named === 'medium') return 'MEDIUM';
 
     const level = Number(alert.rule_level ?? 0);
     if (level >= 12) return 'CRITICAL';
@@ -190,7 +190,7 @@ export class IncidentsService {
     const sev = String(value ?? '').trim().toUpperCase();
     if (sev === 'CRITICAL') return 'CRITICAL';
     if (sev === 'HIGH') return 'HIGH';
-    if (sev === 'MEDIUM') return 'MEDIUM';
+    if (sev === 'MEDIUM' || sev === 'MEDUIM') return 'MEDIUM';
     if (sev === 'LOW') return 'LOW';
     return null;
   }
@@ -267,14 +267,6 @@ export class IncidentsService {
     }
     if ((alert.vt_malicious ?? 0) > 0) return 'OPEN';
     return 'OPEN';
-  }
-
-  private toMttd(alert: AlertItem): number {
-    const provided = this.asFiniteNumber(alert.mttd_minutes);
-    if (provided !== null) return Math.max(1, Math.min(240, Math.round(provided * 10) / 10));
-
-    const fired = Number(alert.fired_times ?? 1);
-    return Math.max(1, Math.min(60, Math.round((10 / Math.max(1, fired)) * 10) / 10));
   }
 
   private toDetectedAt(alert: AlertItem): string {

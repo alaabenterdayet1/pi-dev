@@ -128,7 +128,7 @@ def parse_args() -> PipelineConfig:
 
 def load_alerts(config: PipelineConfig) -> pd.DataFrame:
     client = MongoClient(config.mongo_uri)
-    docs = list(client[config.db_name][config.collection_name].find())
+    docs = list(client[config.db_name][config.collection_name].find().sort("_id", 1))
     if not docs:
         raise RuntimeError("No alerts found in MongoDB collection.")
 
@@ -430,6 +430,44 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     return features[final_columns]
 
 
+def build_classifier_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Build richer features for supervised severity classification."""
+    features = df.copy()
+
+    numeric_cols = [
+        "rule_level",
+        "fired_times",
+        "src_port",
+        "vt_reputation",
+        "vt_malicious",
+        "vt_suspicious",
+        "vt_undetected",
+        "hour",
+        "is_weekend",
+    ]
+
+    for col in numeric_cols:
+        features[col] = pd.to_numeric(features.get(col, 0), errors="coerce").fillna(0)
+
+    categorical_cols = [
+        "log_program",
+        "decoder_name",
+        "cortex_taxonomies",
+        "fw_interface",
+        "fw_action_type",
+        "agent_name",
+        "dstuser",
+    ]
+
+    for col in categorical_cols:
+        features[col] = features.get(col, "unknown").fillna("unknown").astype(str).str.lower()
+
+    model_features = features[numeric_cols + categorical_cols].copy()
+    model_features = pd.get_dummies(model_features, columns=categorical_cols, drop_first=False, dtype=int)
+
+    return model_features
+
+
 def load_pretrained_model(model_path: str = None) -> Tuple[RandomForestRegressor, Dict[str, float]]:
     """Load pre-trained Random Forest regressor from pickle file.
     
@@ -571,33 +609,58 @@ def severity_label_to_score(label: str) -> int:
 
 
 def train_classifier_model(
-    x: pd.DataFrame,
+    x_train_source: pd.DataFrame,
     y_labels: pd.Series,
     seed: int,
+    x_predict: pd.DataFrame | None = None,
+    time_values: pd.Series | None = None,
+    holdout_ratio: float = 0.2,
 ) -> Tuple[RandomForestClassifier, Dict[str, float], np.ndarray]:
-    """Train a severity classifier and return holdout metrics + full-dataset predictions."""
+    """Train a severity classifier and return holdout metrics + scored predictions.
+
+    Holdout metrics are computed on x_train_source split only.
+    Final predictions are produced on x_predict (or x_train_source if not provided).
+    """
     y = y_labels.astype(str).map(normalize_severity_label)
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        x,
-        y,
-        test_size=0.2,
-        random_state=seed,
-        stratify=y,
-    )
+    # Strict temporal split: oldest samples for training, newest samples for holdout.
+    # If timestamp parsing fails, fallback to original row order.
+    n = len(x_train_source)
+    if n < 10:
+        split_idx = max(1, int(n * 0.8))
+        train_idx = np.arange(0, split_idx)
+        test_idx = np.arange(split_idx, n)
+    else:
+        ratio = float(np.clip(holdout_ratio, 0.05, 0.4))
+        if time_values is not None:
+            ts = pd.to_datetime(time_values, errors="coerce")
+            order = np.argsort(ts.fillna(pd.Timestamp.min).to_numpy())
+        else:
+            order = np.arange(n)
+
+        split_idx = max(1, int(n * (1.0 - ratio)))
+        split_idx = min(split_idx, n - 1)
+        train_idx = order[:split_idx]
+        test_idx = order[split_idx:]
+
+    x_train = x_train_source.iloc[train_idx]
+    x_test = x_train_source.iloc[test_idx]
+    y_train = y.iloc[train_idx]
+    y_test = y.iloc[test_idx]
 
     clf = RandomForestClassifier(
-        n_estimators=450,
-        max_depth=18,
-        min_samples_leaf=2,
-        class_weight="balanced_subsample",
+        n_estimators=300,
+        max_depth=10,
+        min_samples_split=8,
+        min_samples_leaf=4,
+        class_weight="balanced",
         random_state=seed,
         n_jobs=-1,
     )
     clf.fit(x_train, y_train)
 
     y_test_pred = clf.predict(x_test)
-    holdout_accuracy = accuracy_score(y_test, y_test_pred)
+    holdout_accuracy = accuracy_score(y_test, y_test_pred) if len(y_test) else 0.0
 
     predicted_positive = np.isin(y_test_pred, ["high", "critical"]).sum()
     fp = np.logical_and(np.isin(y_test_pred, ["high", "critical"]), np.isin(y_test, ["informational", "low"])).sum()
@@ -605,13 +668,23 @@ def train_classifier_model(
 
     precision_critical = precision_score(y_test, y_test_pred, labels=["critical"], average="macro", zero_division=0)
 
-    y_all_pred_labels = clf.predict(x)
+    y_test_numeric = np.array([severity_to_numeric(v) for v in y_test], dtype=float)
+    y_pred_numeric = np.array([severity_to_numeric(v) for v in y_test_pred], dtype=float)
+    mae = float(mean_absolute_error(y_test_numeric, y_pred_numeric)) if len(y_test_numeric) else 0.0
+    r2 = float(r2_score(y_test_numeric, y_pred_numeric)) if len(np.unique(y_test_numeric)) > 1 else 0.0
+
+    # Refit on full training source for production scoring after holdout evaluation.
+    clf.fit(x_train_source, y)
+    x_scoring = x_predict if x_predict is not None else x_train_source
+    y_all_pred_labels = clf.predict(x_scoring)
     y_all_pred_scores = np.array([severity_label_to_score(label) for label in y_all_pred_labels], dtype=float)
 
     metrics = {
         "model_accuracy": round(float(np.clip(holdout_accuracy, 0.0, 1.0)), 4),
         "false_positive_rate": round(float(np.clip(fpr, 0.0, 1.0)), 4),
         "precision_critical": round(float(np.clip(precision_critical, 0.0, 1.0)), 4),
+        "mae": round(mae, 2),
+        "r2_score": round(float(np.clip(r2, -1.0, 1.0)), 4),
     }
     return clf, metrics, y_all_pred_scores
 
@@ -886,25 +959,81 @@ def main() -> None:
     df_augmented = prepare_dataframe(df_augmented_raw)
     print(f"Data preparation complete")
     
-    # Build features
-    x = build_features(df_augmented)
-    print(f"Features built: {x.shape[1]} columns")
+    # Build features for each modeling path
+    x_pretrained = build_features(df_augmented)
+    print(f"Pretrained feature set built: {x_pretrained.shape[1]} columns")
+
+    # Keep a dedicated real subset for robust validation and scoring outputs.
+    real_count = len(df_raw)
+    df_real = df_augmented.iloc[:real_count].copy()
 
     trained_metrics: Dict[str, float] = {}
     model_source = "pre-trained"
+    model_type = "RandomForestRegressor"
 
     if config.retrain_classifier:
-        print("Training supervised severity classifier...")
-        clf, trained_metrics, predictions = train_classifier_model(
-            x,
-            df_augmented["iris_severity_name"],
-            config.seed,
-        )
-        model_source = "retrained-classifier"
-        config.classifier_model_output.parent.mkdir(parents=True, exist_ok=True)
-        with open(config.classifier_model_output, "wb") as f:
-            pickle.dump(clf, f)
-        print(f"Retrained classifier saved to: {config.classifier_model_output}")
+        y_real_labels = df_real["iris_severity_name"].astype(str).map(normalize_severity_label)
+        unique_real_labels = sorted(set(y_real_labels.tolist()))
+
+        if len(unique_real_labels) < 2:
+            print(
+                "Insufficient real-label diversity for direct supervised training "
+                f"(classes={unique_real_labels}). "
+                "Switching to augmented balanced training with holdout validation."
+            )
+
+            y_augmented_labels = df_augmented["iris_severity_name"].astype(str).map(normalize_severity_label)
+            unique_augmented_labels = sorted(set(y_augmented_labels.tolist()))
+
+            if len(unique_augmented_labels) < 2:
+                print(
+                    "Augmented labels also lack diversity "
+                    f"(classes={unique_augmented_labels}). Using heuristic scoring fallback."
+                )
+                predictions = np.array(
+                    [contextual_score_from_alert(row) for _, row in df_augmented.iterrows()],
+                    dtype=float,
+                )
+                model_source = "insufficient-label-diversity"
+                model_type = "HeuristicScoring"
+            else:
+                x_classifier_augmented = build_classifier_features(df_augmented)
+                print(f"Classifier feature set (augmented train) built: {x_classifier_augmented.shape[1]} columns")
+                print("Training supervised severity classifier on augmented dataset...")
+
+                clf, trained_metrics, predictions = train_classifier_model(
+                    x_classifier_augmented,
+                    y_augmented_labels,
+                    config.seed,
+                    x_classifier_augmented,
+                    df_augmented.get("timestamp"),
+                )
+                model_source = "retrained-classifier-augmented"
+                model_type = "RandomForestClassifier"
+                config.classifier_model_output.parent.mkdir(parents=True, exist_ok=True)
+                with open(config.classifier_model_output, "wb") as f:
+                    pickle.dump(clf, f)
+                print(f"Retrained classifier saved to: {config.classifier_model_output}")
+        else:
+            x_classifier_real = build_classifier_features(df_real)
+            x_classifier_augmented = build_classifier_features(df_augmented)
+            # Align scoring columns to training columns to avoid schema drift.
+            x_classifier_augmented = x_classifier_augmented.reindex(columns=x_classifier_real.columns, fill_value=0)
+            print(f"Classifier feature set (real train) built: {x_classifier_real.shape[1]} columns")
+            print("Training supervised severity classifier...")
+            clf, trained_metrics, predictions = train_classifier_model(
+                x_classifier_real,
+                y_real_labels,
+                config.seed,
+                x_classifier_augmented,
+                df_real.get("timestamp"),
+            )
+            model_source = "retrained-classifier"
+            model_type = "RandomForestClassifier"
+            config.classifier_model_output.parent.mkdir(parents=True, exist_ok=True)
+            with open(config.classifier_model_output, "wb") as f:
+                pickle.dump(clf, f)
+            print(f"Retrained classifier saved to: {config.classifier_model_output}")
     else:
         # Try to load pre-trained model
         model, _ = load_pretrained_model()
@@ -912,39 +1041,40 @@ def main() -> None:
         # If pre-trained model loaded successfully
         if model is not None:
             print("Using pre-trained Random Forest model for scoring")
-            predictions = model.predict(x)
+            predictions = model.predict(x_pretrained)
             predictions = np.clip(predictions, 0, 100)  # Ensure 0-100 range
             model_source = "pre-trained"
+            model_type = "RandomForestRegressor"
         else:
             print("Pre-trained model not available. Using heuristic fallback.")
             # Heuristic fallback: calculate scores based on alert severity and VT results
-            predictions = np.zeros(len(x))
-            for idx, row_data in x.iterrows():
-                score = 20  # base score
-                for col in ["vt_malicious", "vt_suspicious"]:
-                    if col in x.columns:
-                        score += float(row_data.get(col, 0)) * 3
+            predictions = np.zeros(len(x_pretrained))
+            for idx, row_data in x_pretrained.iterrows():
+                score = 15
+                score += float(row_data.get("rule_level", 0)) * 2.0
+                score += float(row_data.get("firedtimes", 0)) * 1.5
+                score += float(row_data.get("malicious", 0)) * 4.0
+                score += float(row_data.get("suspicious", 0)) * 2.0
                 score = min(100, score)
                 predictions[idx] = score
             model_source = "fallback"
+            model_type = "HeuristicScoring"
 
     # Score real alerts only (first N rows)
-    real_count = len(df_raw)
-    df_real = df_augmented.iloc[:real_count].copy()
     real_scores = predictions[:real_count]
 
     scored_alerts = build_alert_outputs(df_real, real_scores)
     statistics = build_statistics(df_real, scored_alerts)
 
-    metrics = compute_dynamic_metrics(df_augmented, predictions)
-    for key in ("model_accuracy", "false_positive_rate", "precision_critical"):
+    metrics = compute_dynamic_metrics(df_real, real_scores)
+    for key in ("model_accuracy", "false_positive_rate", "precision_critical", "mae", "r2_score"):
         if key in trained_metrics:
             metrics[key] = trained_metrics[key]
 
     report = {
         "metadata": {
             "generated_at": datetime.now().isoformat(),
-            "model_type": "RandomForestRegressor",
+            "model_type": model_type,
             "model_source": model_source,
         },
         "metrics": metrics,

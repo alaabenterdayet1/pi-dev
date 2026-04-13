@@ -1,15 +1,15 @@
 {
   "metadata": {
-    "generated_at": "2026-04-13T19:10:08.825634",
-    "model_type": "RandomForestRegressor",
-    "model_source": "retrained-classifier"
+    "generated_at": "2026-04-13T21:44:36.103441",
+    "model_type": "RandomForestClassifier",
+    "model_source": "retrained-classifier-augmented"
   },
   "metrics": {
-    "model_accuracy": 0.8,
+    "model_accuracy": 0.6208,
     "false_positive_rate": 0.0,
     "precision_critical": 1.0,
-    "mae": 5.95,
-    "r2_score": 0.924
+    "mae": 5.73,
+    "r2_score": 0.8598
   },
   "training_dataset": {
     "real_rows": 253,
@@ -20,7 +20,7 @@
     "total_alerts": 253,
     "avg_mttd_minutes": 13.41,
     "avg_mttr_minutes": 15.32,
-    "avg_ai_score": 21.56,
+    "avg_ai_score": 21.64,
     "severity_distribution": {
       "low": 0,
       "informational": 253,
@@ -31,8 +31,8 @@
     "decision_distribution": {
       "ISOLATE": 0,
       "ESCALATE": 46,
-      "INVESTIGATE": 0,
-      "MONITOR": 207
+      "INVESTIGATE": 1,
+      "MONITOR": 206
     }
   },
   "alerts": [
@@ -295,14 +295,14 @@
       "id": "69dba0c4ca32f540420cf5ee",
       "rule_id": "5760",
       "rule_description": "sshd: authentication failed.",
-      "severity_name": "low",
+      "severity_name": "medium",
       "source_severity_name": "Informational",
       "src_ip": "192.168.1.85",
-      "ai_risk_score": 22,
-      "ai_model_raw_score": 18,
-      "ai_confidence": 64,
-      "ai_decision": "MONITOR",
-      "ai_recommendation": "Keep under monitoring and trigger automated watchlist rules.",
+      "ai_risk_score": 43,
+      "ai_model_raw_score": 52,
+      "ai_confidence": 73,
+      "ai_decision": "INVESTIGATE",
+      "ai_recommendation": "Investigate correlated logs and monitor endpoint behavior for 24h.",
       "mttd_minutes": 0.5,
       "mttr_minutes": 29.2
     },

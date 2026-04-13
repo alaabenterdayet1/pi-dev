@@ -34,7 +34,7 @@ export class SeverityBadgeComponent {
     if (value === 'INFORMATIONAL' || value === 'INFO') return 'LOW';
     if (value === 'CRITICAL') return 'CRITICAL';
     if (value === 'HIGH') return 'HIGH';
-    if (value === 'MEDIUM') return 'MEDIUM';
+    if (value === 'MEDIUM' || value === 'MEDUIM') return 'MEDIUM';
     if (value === 'LOW') return 'LOW';
     return 'LOW';
   }
