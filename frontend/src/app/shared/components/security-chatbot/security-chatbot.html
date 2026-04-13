@@ -1,0 +1,31 @@
+<button class="chat-toggle" (click)="toggleOpen()" type="button">
+  SEC CHAT
+</button>
+
+@if (isOpen()) {
+  <section class="chat-panel">
+    <header class="chat-header">Assistant</header>
+
+    <div class="chat-messages">
+      @for (msg of messages(); track $index) {
+        <div class="msg" [class.user]="msg.role === 'user'" [class.assistant]="msg.role === 'assistant'">
+          <span>{{ msg.text }}</span>
+        </div>
+      }
+      @if (isLoading()) {
+        <div class="msg assistant"><span>...</span></div>
+      }
+    </div>
+
+    <div class="chat-input-row">
+      <input
+        type="text"
+        [ngModel]="draft()"
+        (ngModelChange)="draft.set($event)"
+        (keydown.enter)="send()"
+        placeholder="Posez une question (court ou detaille)"
+      />
+      <button type="button" (click)="send()">Envoyer</button>
+    </div>
+  </section>
+}

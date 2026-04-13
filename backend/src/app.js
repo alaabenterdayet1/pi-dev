@@ -5,6 +5,7 @@ const patientRoutes = require('./routes/patientRoutes');
 const alertRoutes = require('./routes/alertRoutes');
 const toolsRoutes = require('./routes/toolsRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 
 const app = express();
 
@@ -19,5 +20,6 @@ app.use('/api/patients', patientRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/tools', toolsRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/chat', chatRoutes);
 
 module.exports = app;
