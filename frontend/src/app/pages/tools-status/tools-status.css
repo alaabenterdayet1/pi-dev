@@ -29,6 +29,21 @@
 .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 
 .tool-network { display: flex; align-items: center; gap: 5px; color: #64748B; padding: 5px 8px; background: rgba(30,45,78,0.4); border-radius: 5px; }
+.tool-validation { display: flex; flex-wrap: wrap; gap: 8px; }
+.validation-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  background: rgba(10, 14, 26, 0.7);
+  color: #CBD5E1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.validation-chip-role { border-color: rgba(0, 212, 255, 0.3); color: #00D4FF; }
+.validation-chip-stage { border-color: rgba(99, 102, 241, 0.3); color: #A5B4FC; }
 
 .tool-metrics { display: flex; flex-direction: column; gap: 7px; }
 .metric-item { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(30,45,78,0.5); }

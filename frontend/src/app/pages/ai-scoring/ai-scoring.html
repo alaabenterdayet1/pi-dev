@@ -100,6 +100,19 @@
             <div class="summary-priority mono">Priority: {{ selectedPriority }}</div>
             <p class="summary-explanation">{{ selectedExplanation }}</p>
 
+            <div class="enrichment-summary-box" [class]="'tone-' + selectedEnrichmentTone">
+              <div class="enrichment-summary-top">
+                <span class="summary-subtitle">External Enrichment</span>
+                <span class="summary-value mono">{{ selectedEnrichmentStatus }}</span>
+              </div>
+              <div class="summary-explanation">{{ selectedEnrichmentSummary }}</div>
+              <div class="enrichment-inline-meta mono">
+                <span>Indicator: {{ selectedEnrichmentIndicator }}</span>
+                <span>Sources: {{ selectedEnrichmentSources }}</span>
+                <span>Checked: {{ selectedEnrichmentChecked }}</span>
+              </div>
+            </div>
+
             <div class="summary-two-cols">
               <div>
                 <div class="summary-subtitle">Model Inputs</div>
@@ -128,6 +141,12 @@
                 <div class="limitation-item">{{ limitation }}</div>
               }
             </div>
+          </div>
+
+          <div class="validation-card-block card-block">
+            <app-validation-evidence
+              headline="VALIDATION GRID EVIDENCE"
+              [sections]="selectedValidationSections"></app-validation-evidence>
           </div>
 
           <div class="charts-grid">

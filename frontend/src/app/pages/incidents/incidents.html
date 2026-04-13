@@ -155,6 +155,20 @@
           <div class="detail-paragraph">{{ getExplanation(selectedIncident) }}</div>
         </div>
 
+        <div class="drawer-section enrichment-section" [class]="'tone-' + getExternalEnrichmentTone(selectedIncident)">
+          <div class="drawer-subtitle">External Enrichment</div>
+          <div class="enrichment-status-line">
+            <span class="detail-label">Status</span>
+            <span class="detail-value mono">{{ getExternalEnrichmentStatus(selectedIncident) }}</span>
+          </div>
+          <div class="detail-paragraph">{{ getExternalEnrichmentSummary(selectedIncident) }}</div>
+          <div class="enrichment-meta mono">
+            <span>Indicator: {{ selectedIncident.rawDetails?.['enrichment_indicator'] || selectedIncident.rawDetails?.['internal_enrichment_indicator'] || selectedIncident.rawDetails?.['external_enrichment_indicator'] || selectedIncident.targetIp || '-' }}</span>
+            <span>Sources: {{ selectedIncident.rawDetails?.['enrichment_sources'] || selectedIncident.rawDetails?.['internal_enrichment_sources'] || selectedIncident.rawDetails?.['external_enrichment_sources'] || 'none' }}</span>
+            <span>Checked: {{ selectedIncident.rawDetails?.['enrichment_checked'] || selectedIncident.rawDetails?.['internal_enrichment_checked'] || selectedIncident.rawDetails?.['external_enrichment_checked'] || 'none' }}</span>
+          </div>
+        </div>
+
         <div class="drawer-section">
           <div class="drawer-subtitle">Model Inputs</div>
           @for (input of getModelInputs(selectedIncident); track trackByLabel($index, input)) {
@@ -189,6 +203,13 @@
               <span class="detail-value">Aucune date exploitable disponible.</span>
             </div>
           }
+        </div>
+
+        <div class="drawer-section validation-drawer-section">
+          <app-validation-evidence
+            headline="VALIDATION GRID EVIDENCE"
+            [compact]="true"
+            [sections]="selectedIncidentValidationSections"></app-validation-evidence>
         </div>
 
         <!-- Action Buttons -->

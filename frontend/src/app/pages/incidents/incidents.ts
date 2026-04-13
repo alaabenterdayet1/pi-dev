@@ -19,14 +19,16 @@ import { IncidentsService } from '../../core/services/incidents.service';
 import { Incident } from '../../core/models/incident.model';
 import { AiScore } from '../../core/models/ai-score.model';
 import { SeverityBadgeComponent } from '../../shared/components/severity-badge/severity-badge';
+import { ValidationEvidenceComponent } from '../../shared/components/validation-evidence/validation-evidence';
 import { TimeAgoPipe } from '../../shared/pipes/time-ago.pipe';
+import { buildIncidentValidationSections, ValidationInsightSection } from '../../core/utils/validation-guidance.util';
 
 @Component({
   selector: 'app-incidents',
   standalone: true,
   imports: [CommonModule, FormsModule, MatTableModule, MatSortModule, MatPaginatorModule,
     MatSelectModule, MatSidenavModule, MatProgressBarModule, MatIconModule, MatButtonModule,
-    MatChipsModule, MatProgressSpinnerModule, SeverityBadgeComponent, TimeAgoPipe],
+    MatChipsModule, MatProgressSpinnerModule, SeverityBadgeComponent, ValidationEvidenceComponent, TimeAgoPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './incidents.html',
   styleUrl: './incidents.css'
@@ -54,7 +56,27 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
     'vt_suspicious',
     'vt_undetected',
     'vt_tags',
+    'vt_as_owner',
     'cortex_taxonomies',
+    'rdns',
+    'abuseipdb_score',
+    'abuseipdb_total_reports',
+    'abuseipdb_last_reported_at',
+    'internal_enrichment_status',
+    'internal_enrichment_indicator',
+    'internal_enrichment_sources',
+    'internal_enrichment_summary',
+    'internal_enrichment_fetched_at',
+    'enrichment_status',
+    'enrichment_indicator',
+    'enrichment_sources',
+    'enrichment_summary',
+    'enrichment_fetched_at',
+    'external_enrichment_status',
+    'external_enrichment_indicator',
+    'external_enrichment_sources',
+    'external_enrichment_summary',
+    'external_enrichment_fetched_at',
     'iris_severity_id',
     'iris_severity_name',
     'iris_alert_title',
@@ -187,6 +209,7 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
   openDetail(inc: Incident): void {
     this.selectedIncident = inc;
     this.selectedScore = null;
+    this.loadIncidentContext(inc.id);
     this.incidentsSvc.getIncidentScore(inc.id).pipe(takeUntil(this.destroy$))
       .subscribe(s => { this.selectedScore = s; this.cdr.markForCheck(); });
     this.detailDrawer.open();
@@ -267,8 +290,13 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
       { label: 'Rule ID', value: ruleId },
       { label: 'Rule Level', value: this.toValue(raw['rule_level']) },
       { label: 'Fired Times', value: this.toValue(raw['fired_times']) },
-      { label: 'Source IP', value: sourceIp },
-      { label: 'Source Port', value: sourcePort },
+      { label: 'Rule Groups', value: this.cleanText(raw['rule_groups']) || 'Non renseigne' },
+      { label: 'MITRE IDs', value: this.cleanText(raw['mitre_ids']) || 'Non renseigne' },
+      { label: 'MITRE Tactics', value: this.cleanText(raw['mitre_tactics']) || 'Non renseigne' },
+      { label: 'MITRE Techniques', value: this.cleanText(raw['mitre_techniques']) || 'Non renseigne' },
+      { label: 'Firewall Interface', value: this.cleanText(raw['fw_interface']) || 'Non renseigne' },
+      { label: 'Blocked Source', value: this.cleanText(raw['fw_source_blocked']) || 'Non renseigne' },
+      { label: 'IRIS Source', value: this.cleanText(raw['iris_alert_source']) || 'Non renseigne' },
       { label: 'Program', value: program },
       { label: 'Firewall Action', value: action },
     ];
@@ -280,18 +308,31 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
     const vtMalicious = this.toValue(raw['vt_malicious']);
     const vtSuspicious = this.toValue(raw['vt_suspicious']);
     const vtUndetected = this.toValue(raw['vt_undetected']);
+    const vtTags = this.cleanText(raw['vt_tags']) || 'Aucun tag VT';
     const misp = this.cleanText(raw['misp'] || raw['misp_ioc'] || raw['misp_event_id']) || 'Aucun enrichissement MISP en DB';
     const geoIp = this.cleanText(raw['geo_ip'] || raw['geoip'] || raw['geoip_country']) || 'GeoIP non enrichi';
     const taxonomies = this.cleanText(raw['cortex_taxonomies']) || 'Aucune taxonomie CTI';
+    const irisSource = this.cleanText(raw['iris_alert_source']) || 'Source IRIS non renseignee';
+    const irisSeverity = this.cleanText(raw['iris_severity_name']) || 'Severite IRIS non renseignee';
 
     return [
       { label: 'VT Reputation', value: vtReputation },
       { label: 'VT Malicious', value: vtMalicious },
       { label: 'VT Suspicious', value: vtSuspicious },
       { label: 'VT Undetected', value: vtUndetected },
+      { label: 'VT Tags', value: vtTags },
+      { label: 'VT AS Owner', value: this.cleanText(raw['vt_as_owner']) || 'AS non renseigne' },
       { label: 'MISP', value: misp },
       { label: 'Geo IP', value: geoIp },
+      { label: 'Reverse DNS', value: this.cleanText(raw['rdns']) || 'RDNS non resolu' },
+      { label: 'AbuseIPDB Score', value: this.toValue(raw['abuseipdb_score']) },
+      { label: 'Abuse Reports', value: this.toValue(raw['abuseipdb_total_reports']) },
       { label: 'Taxonomies', value: taxonomies },
+      { label: 'IRIS Severity', value: irisSeverity },
+      { label: 'IRIS Source', value: irisSource },
+      { label: 'Enrichment Status', value: this.cleanText(raw['enrichment_status'] || raw['internal_enrichment_status'] || raw['external_enrichment_status']) || 'DB only' },
+      { label: 'Enrichment Sources', value: this.cleanText(raw['enrichment_sources'] || raw['internal_enrichment_sources'] || raw['external_enrichment_sources']) || 'Aucune source externe' },
+      { label: 'Enrichment Summary', value: this.cleanText(raw['enrichment_summary'] || raw['internal_enrichment_summary'] || raw['external_enrichment_summary']) || 'Aucun resume externe' },
     ];
   }
 
@@ -333,6 +374,36 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
       .map(event => ({ label: event.label, value: event.date.toLocaleString() }));
   }
 
+  getExternalEnrichmentStatus(incident: Incident): string {
+    return this.cleanText(
+      incident.rawDetails?.['enrichment_status'] ||
+      incident.rawDetails?.['internal_enrichment_status'] ||
+      incident.rawDetails?.['external_enrichment_status']
+    ) || 'database-only';
+  }
+
+  getExternalEnrichmentSummary(incident: Incident): string {
+    const summary = this.cleanText(
+      incident.rawDetails?.['enrichment_summary'] ||
+      incident.rawDetails?.['internal_enrichment_summary'] ||
+      incident.rawDetails?.['external_enrichment_summary']
+    );
+    if (summary) return summary;
+
+    if (this.getExternalEnrichmentStatus(incident) === 'database-sufficient') {
+      return 'Threat context is already available in the stored data.';
+    }
+
+    return 'No additional external enrichment is currently visible for this incident.';
+  }
+
+  getExternalEnrichmentTone(incident: Incident): 'success' | 'warning' | 'neutral' {
+    const status = this.getExternalEnrichmentStatus(incident);
+    if (status === 'external-fallback' || status === 'database-sufficient') return 'success';
+    if (status === 'private-indicator' || status === 'external-unavailable' || status === 'no-indicator') return 'warning';
+    return 'neutral';
+  }
+
   getAllDetailEntries(incident: Incident): Array<{ key: string; label: string; value: string; isLong: boolean }> {
     const source = incident.rawDetails ?? {};
     return Object.entries(source)
@@ -347,6 +418,22 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
         };
       })
       .sort((a, b) => this.sortDetailKeys(a.key, b.key));
+  }
+
+  get selectedIncidentValidationSections(): ValidationInsightSection[] {
+    if (!this.selectedIncident) return [];
+    return buildIncidentValidationSections(this.selectedIncident);
+  }
+
+  private loadIncidentContext(incidentId: string): void {
+    this.incidentsSvc.getIncidentContext(incidentId).pipe(takeUntil(this.destroy$)).subscribe((incident) => {
+      if (!incident || !this.selectedIncident || this.selectedIncident.id !== incidentId) return;
+
+      this.selectedIncident = incident;
+      this.allIncidents = this.allIncidents.map((item) => item.id === incidentId ? incident : item);
+      this.dataSource.data = this.dataSource.data.map((item) => item.id === incidentId ? incident : item);
+      this.cdr.markForCheck();
+    });
   }
 
   private sortDetailKeys(a: string, b: string): number {

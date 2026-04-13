@@ -190,6 +190,10 @@
   margin-bottom: 12px;
 }
 
+.validation-card-block {
+  padding: 12px;
+}
+
 .summary-priority {
   color: #ffd700;
   margin-bottom: 6px;
@@ -201,6 +205,37 @@
   color: #cbd5e1;
   font-size: 12px;
   line-height: 1.45;
+}
+
+.enrichment-summary-box {
+  border: 1px solid rgba(100, 116, 139, 0.22);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: rgba(15, 22, 41, 0.55);
+}
+
+.enrichment-summary-box.tone-success {
+  border-color: rgba(0, 227, 150, 0.3);
+}
+
+.enrichment-summary-box.tone-warning {
+  border-color: rgba(255, 140, 0, 0.3);
+}
+
+.enrichment-summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.enrichment-inline-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 10px;
+  color: #94A3B8;
 }
 
 .summary-two-cols {

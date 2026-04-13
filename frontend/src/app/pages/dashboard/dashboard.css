@@ -68,6 +68,59 @@
   line-height: 1.4;
 }
 
+.enrichment-banner {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  background: rgba(10, 14, 26, 0.78);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.enrichment-banner.tone-success {
+  border-color: rgba(0, 227, 150, 0.32);
+}
+
+.enrichment-banner.tone-warning {
+  border-color: rgba(255, 140, 0, 0.32);
+}
+
+.enrichment-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.enrichment-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  color: #94A3B8;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.enrichment-status {
+  font-size: 11px;
+  color: #00D4FF;
+}
+
+.enrichment-summary {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #E2E8F0;
+}
+
+.enrichment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 10px;
+  color: #94A3B8;
+}
+
 .details-actions {
   margin-top: 14px;
 }

@@ -8,12 +8,72 @@ const {
   enrichAlertsFromReport,
   scoreThreatFeatures,
 } = require('../services/aiScoringService');
+const { enrichAlertWithInternalCorrelation } = require('../services/internalCorrelationEnrichmentService');
+const { enrichAlertWithExternalContext } = require('../services/externalEnrichmentService');
 
 const execFileAsync = promisify(execFile);
 
 const stripAiFields = (alertDoc) => {
   const alert = typeof alertDoc.toObject === 'function' ? alertDoc.toObject() : { ...alertDoc };
   return alert;
+};
+
+const toArray = (value) => {
+  if (Array.isArray(value)) return value.map((entry) => String(entry)).filter(Boolean);
+  if (value === undefined || value === null) return [];
+  const text = String(value).trim();
+  return text ? [text] : [];
+};
+
+const mergeEnrichmentView = (alert) => {
+  const internalSources = toArray(alert.internal_enrichment_sources);
+  const externalSources = toArray(alert.external_enrichment_sources);
+  const sources = Array.from(new Set([...internalSources, ...externalSources]));
+  const checked = Array.from(new Set([
+    ...toArray(alert.internal_enrichment_checked),
+    ...toArray(alert.external_enrichment_checked),
+  ]));
+
+  const internalStatus = String(alert.internal_enrichment_status || '').trim();
+  const externalStatus = String(alert.external_enrichment_status || '').trim();
+  const hasInternal = internalSources.length > 0;
+  const hasExternal = externalSources.length > 0;
+
+  let status = 'database-only';
+  if (hasInternal && hasExternal) status = 'combined-enrichment';
+  else if (hasInternal) status = internalStatus || 'internal-correlation';
+  else if (hasExternal) status = externalStatus || 'external-fallback';
+  else if (internalStatus === 'database-sufficient' || externalStatus === 'database-sufficient') status = 'database-sufficient';
+  else if (internalStatus === 'no-indicator' || externalStatus === 'no-indicator') status = 'no-indicator';
+  else if (internalStatus === 'private-indicator' || externalStatus === 'private-indicator') status = 'private-indicator';
+  else if (internalStatus === 'internal-unavailable') status = 'internal-unavailable';
+  else if (externalStatus === 'external-unavailable') status = 'external-unavailable';
+  else if (internalStatus) status = internalStatus;
+  else if (externalStatus) status = externalStatus;
+
+  const summaryParts = [
+    alert.internal_enrichment_summary ? `Internal: ${alert.internal_enrichment_summary}` : '',
+    alert.external_enrichment_summary ? `External: ${alert.external_enrichment_summary}` : '',
+  ].filter(Boolean);
+
+  return {
+    ...alert,
+    enrichment_indicator:
+      alert.internal_enrichment_indicator ||
+      alert.external_enrichment_indicator ||
+      alert.src_ip ||
+      alert.target_ip ||
+      alert.iris_alert_source ||
+      '',
+    enrichment_status: status,
+    enrichment_sources: sources,
+    enrichment_checked: checked,
+    enrichment_summary: summaryParts.join(' ') || 'No enrichment summary is available.',
+    enrichment_fetched_at:
+      alert.external_enrichment_fetched_at ||
+      alert.internal_enrichment_fetched_at ||
+      '',
+  };
 };
 
 const getLatestAlerts = async (req, res) => {
@@ -40,6 +100,29 @@ const getAllAlerts = async (req, res) => {
     res.status(200).json({
       count: sanitizedAlerts.length,
       data: sanitizedAlerts,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getAlertContextById = async (req, res) => {
+  try {
+    const alert = await Alert.findById(req.params.id);
+    if (!alert) {
+      return res.status(404).json({ message: 'Alert not found' });
+    }
+
+    const reportEnriched = await enrichAlertFromReport(alert);
+    const internalEnriched = await enrichAlertWithInternalCorrelation(reportEnriched);
+    const externalEnriched = await enrichAlertWithExternalContext(internalEnriched, {
+      force: String(req.query.force || 'false').toLowerCase() === 'true',
+    });
+    const threatContext = mergeEnrichmentView(externalEnriched);
+
+    res.status(200).json({
+      message: 'Alert context loaded successfully',
+      data: threatContext,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -204,6 +287,7 @@ const runAlertScoringPipeline = async (req, res) => {
 module.exports = {
   getLatestAlerts,
   getAllAlerts,
+  getAlertContextById,
   classifyAlertById,
   updateAlertStatus,
   runAlertScoringPipeline,

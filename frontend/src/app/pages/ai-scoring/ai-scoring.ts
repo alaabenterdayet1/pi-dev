@@ -10,11 +10,13 @@ import { AiScoringService } from '../../core/services/ai-scoring.service';
 import { Incident } from '../../core/models/incident.model';
 import { PipelineSummary } from '../../core/models/ai-score.model';
 import { SeverityBadgeComponent } from '../../shared/components/severity-badge/severity-badge';
+import { ValidationEvidenceComponent } from '../../shared/components/validation-evidence/validation-evidence';
+import { buildIncidentValidationSections, ValidationInsightSection } from '../../core/utils/validation-guidance.util';
 
 @Component({
   selector: 'app-ai-scoring',
   standalone: true,
-  imports: [CommonModule, MatIconModule, NgApexchartsModule, SeverityBadgeComponent],
+  imports: [CommonModule, MatIconModule, NgApexchartsModule, SeverityBadgeComponent, ValidationEvidenceComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './ai-scoring.html',
   styleUrls: ['./ai-scoring.css']
@@ -48,6 +50,9 @@ export class AiScoringComponent implements OnInit, OnDestroy {
       this.incidents = data.filter((i) => i.severity === 'LOW' || i.severity === 'MEDIUM' || i.severity === 'HIGH');
       this.selectedIncident = this.incidents[0] ?? null;
       this.refreshCharts();
+      if (this.selectedIncident) {
+        this.loadIncidentContext(this.selectedIncident.id);
+      }
       this.buildSummaryCharts();
       this.cdr.markForCheck();
     });
@@ -61,6 +66,7 @@ export class AiScoringComponent implements OnInit, OnDestroy {
     if (first) {
       this.selectedIncident = first;
       this.refreshCharts();
+      this.loadIncidentContext(first.id);
     }
     this.cdr.markForCheck();
   }
@@ -68,6 +74,7 @@ export class AiScoringComponent implements OnInit, OnDestroy {
   selectIncident(incident: Incident): void {
     this.selectedIncident = incident;
     this.refreshCharts();
+    this.loadIncidentContext(incident.id);
     this.cdr.markForCheck();
   }
 
@@ -187,15 +194,78 @@ export class AiScoringComponent implements OnInit, OnDestroy {
     return `Decision ${incident.decision}: ${reasons.join(', ')}.`;
   }
 
+  get selectedEnrichmentStatus(): string {
+    return this.toText(
+      this.selectedIncident?.rawDetails?.['enrichment_status'] ||
+      this.selectedIncident?.rawDetails?.['internal_enrichment_status'] ||
+      this.selectedIncident?.rawDetails?.['external_enrichment_status']
+    ) || 'database-only';
+  }
+
+  get selectedEnrichmentSummary(): string {
+    const summary = this.toText(
+      this.selectedIncident?.rawDetails?.['enrichment_summary'] ||
+      this.selectedIncident?.rawDetails?.['internal_enrichment_summary'] ||
+      this.selectedIncident?.rawDetails?.['external_enrichment_summary']
+    );
+    if (summary) return summary;
+
+    if (this.selectedEnrichmentStatus === 'database-sufficient') {
+      return 'Threat context is already available in stored data.';
+    }
+
+    return 'No additional external enrichment is currently visible for this alert.';
+  }
+
+  get selectedEnrichmentTone(): 'success' | 'warning' | 'neutral' {
+    const status = this.selectedEnrichmentStatus;
+    if (status === 'external-fallback' || status === 'database-sufficient') return 'success';
+    if (status === 'private-indicator' || status === 'external-unavailable' || status === 'no-indicator') return 'warning';
+    return 'neutral';
+  }
+
+  get selectedEnrichmentIndicator(): string {
+    return this.toText(
+      this.selectedIncident?.rawDetails?.['enrichment_indicator'] ||
+      this.selectedIncident?.rawDetails?.['internal_enrichment_indicator'] ||
+      this.selectedIncident?.rawDetails?.['external_enrichment_indicator']
+    ) || this.selectedIp;
+  }
+
+  get selectedEnrichmentSources(): string {
+    const value =
+      this.selectedIncident?.rawDetails?.['enrichment_sources'] ??
+      this.selectedIncident?.rawDetails?.['internal_enrichment_sources'] ??
+      this.selectedIncident?.rawDetails?.['external_enrichment_sources'];
+    if (Array.isArray(value)) return value.join(', ');
+    return this.toText(value) || 'none';
+  }
+
+  get selectedEnrichmentChecked(): string {
+    const value =
+      this.selectedIncident?.rawDetails?.['enrichment_checked'] ??
+      this.selectedIncident?.rawDetails?.['internal_enrichment_checked'] ??
+      this.selectedIncident?.rawDetails?.['external_enrichment_checked'];
+    if (Array.isArray(value)) return value.join(', ');
+    return this.toText(value) || 'none';
+  }
+
   get selectedInputsSummary(): Array<{ label: string; value: string }> {
     const raw = this.selectedIncident?.rawDetails || {};
     return [
       { label: 'Rule ID', value: this.toText(raw['rule_id']) || this.selectedIncident?.id || '-' },
       { label: 'Rule Level', value: this.toText(raw['rule_level']) || '-' },
       { label: 'Fired Times', value: this.toText(raw['fired_times']) || '-' },
+      { label: 'Rule Groups', value: this.toText(raw['rule_groups']) || '-' },
+      { label: 'MITRE IDs', value: this.toText(raw['mitre_ids']) || '-' },
+      { label: 'MITRE Tactics', value: this.toText(raw['mitre_tactics']) || '-' },
+      { label: 'MITRE Techniques', value: this.toText(raw['mitre_techniques']) || '-' },
       { label: 'Source IP', value: this.toText(raw['src_ip']) || this.selectedIp },
+      { label: 'Source Port', value: this.toText(raw['src_port']) || '-' },
       { label: 'Program', value: this.toText(raw['log_program']) || this.toText(raw['decoder_name']) || '-' },
-      { label: 'Action', value: this.toText(raw['fw_action_type']) || '-' },
+      { label: 'Firewall Action', value: this.toText(raw['fw_action_type']) || '-' },
+      { label: 'Firewall Interface', value: this.toText(raw['fw_interface']) || '-' },
+      { label: 'IRIS Source', value: this.toText(raw['iris_alert_source']) || '-' },
     ];
   }
 
@@ -205,8 +275,20 @@ export class AiScoringComponent implements OnInit, OnDestroy {
       { label: 'VT Reputation', value: this.toText(raw['vt_reputation']) || '-' },
       { label: 'VT Malicious', value: this.toText(raw['vt_malicious']) || '-' },
       { label: 'VT Suspicious', value: this.toText(raw['vt_suspicious']) || '-' },
+      { label: 'VT Undetected', value: this.toText(raw['vt_undetected']) || '-' },
+      { label: 'VT Tags', value: this.toText(raw['vt_tags']) || '-' },
+      { label: 'VT AS Owner', value: this.toText(raw['vt_as_owner']) || '-' },
       { label: 'MISP', value: this.toText(raw['misp'] || raw['misp_ioc'] || raw['misp_event_id']) || 'non enrichi' },
       { label: 'Geo IP', value: this.toText(raw['geo_ip'] || raw['geoip'] || raw['geoip_country']) || 'non enrichi' },
+      { label: 'Reverse DNS', value: this.toText(raw['rdns']) || '-' },
+      { label: 'AbuseIPDB Score', value: this.toText(raw['abuseipdb_score']) || '-' },
+      { label: 'Abuse Reports', value: this.toText(raw['abuseipdb_total_reports']) || '-' },
+      { label: 'Taxonomies', value: this.toText(raw['cortex_taxonomies']) || '-' },
+      { label: 'IRIS Severity', value: this.toText(raw['iris_severity_name']) || '-' },
+      { label: 'IRIS Source', value: this.toText(raw['iris_alert_source']) || '-' },
+      { label: 'Enrichment Status', value: this.toText(raw['enrichment_status'] || raw['internal_enrichment_status'] || raw['external_enrichment_status']) || 'db-only' },
+      { label: 'Enrichment Sources', value: this.toText(raw['enrichment_sources'] || raw['internal_enrichment_sources'] || raw['external_enrichment_sources']) || '-' },
+      { label: 'Enrichment Summary', value: this.toText(raw['enrichment_summary'] || raw['internal_enrichment_summary'] || raw['external_enrichment_summary']) || '-' },
     ];
   }
 
@@ -228,6 +310,22 @@ export class AiScoringComponent implements OnInit, OnDestroy {
     limitations.push('Des faux positifs restent possibles sans contexte metier complet.');
     limitations.push('La qualite depend de l enrichissement CTI (VT/MISP/GeoIP).');
     return limitations;
+  }
+
+  get selectedValidationSections(): ValidationInsightSection[] {
+    if (!this.selectedIncident) return [];
+    return buildIncidentValidationSections(this.selectedIncident, this.pipelineSummary);
+  }
+
+  private loadIncidentContext(incidentId: string): void {
+    this.incidentsSvc.getIncidentContext(incidentId).pipe(takeUntil(this.destroy$)).subscribe((incident) => {
+      if (!incident || !this.selectedIncident || this.selectedIncident.id !== incidentId) return;
+
+      this.selectedIncident = incident;
+      this.incidents = this.incidents.map((item) => item.id === incidentId ? incident : item);
+      this.refreshCharts();
+      this.cdr.markForCheck();
+    });
   }
 
   private refreshCharts(): void {

@@ -49,7 +49,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     'vt_suspicious',
     'vt_undetected',
     'vt_tags',
+    'vt_as_owner',
     'cortex_taxonomies',
+    'rdns',
+    'abuseipdb_score',
+    'abuseipdb_total_reports',
+    'abuseipdb_last_reported_at',
+    'internal_enrichment_status',
+    'internal_enrichment_indicator',
+    'internal_enrichment_sources',
+    'internal_enrichment_summary',
+    'internal_enrichment_fetched_at',
+    'enrichment_status',
+    'enrichment_indicator',
+    'enrichment_sources',
+    'enrichment_summary',
+    'enrichment_fetched_at',
+    'external_enrichment_status',
+    'external_enrichment_indicator',
+    'external_enrichment_sources',
+    'external_enrichment_summary',
+    'external_enrichment_fetched_at',
     'iris_severity_id',
     'iris_severity_name',
     'iris_alert_title',
@@ -123,6 +143,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.selectedAlert = alert;
     this.showFullDetails = false;
     this.buildSelectedAlertSparklines(alert);
+    this.loadSelectedAlertContext(alert);
   }
 
   toggleFullDetails(): void {
@@ -229,11 +250,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
       { label: 'Rule ID', value: this.getStringField(alert, ['rule_id']) || 'N/A' },
       { label: 'Rule Level', value: this.getNumberText(alert, ['rule_level']) },
       { label: 'Fired Times', value: this.getNumberText(alert, ['fired_times']) },
+      { label: 'Rule Groups', value: this.getStringField(alert, ['rule_groups']) || 'N/A' },
+      { label: 'MITRE IDs', value: this.getStringField(alert, ['mitre_ids']) || 'N/A' },
+      { label: 'MITRE Tactics', value: this.getStringField(alert, ['mitre_tactics']) || 'N/A' },
+      { label: 'MITRE Techniques', value: this.getStringField(alert, ['mitre_techniques']) || 'N/A' },
+      { label: 'IRIS Severity', value: this.getStringField(alert, ['iris_severity_name']) || 'N/A' },
       { label: 'Source IP', value: this.getStringField(alert, ['src_ip', 'source_ip']) || 'N/A' },
       { label: 'Source Port', value: this.getStringField(alert, ['src_port']) || 'N/A' },
       { label: 'User', value: this.getStringField(alert, ['dst_user', 'dstuser', 'user', 'username']) || 'N/A' },
       { label: 'Program', value: this.getStringField(alert, ['log_program']) || 'N/A' },
-      { label: 'Action', value: this.getStringField(alert, ['fw_action_type']) || 'N/A' }
+      { label: 'Firewall Action', value: this.getStringField(alert, ['fw_action_type']) || 'N/A' },
+      { label: 'Firewall Interface', value: this.getStringField(alert, ['fw_interface']) || 'N/A' },
+      { label: 'Blocked Source', value: this.getStringField(alert, ['fw_source_blocked']) || 'N/A' },
+      { label: 'IRIS Source', value: this.getStringField(alert, ['iris_alert_source']) || 'N/A' }
     ];
   }
 
@@ -243,72 +272,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
       { label: 'VT Malicious', value: this.getNumberText(alert, ['vt_malicious']) },
       { label: 'VT Suspicious', value: this.getNumberText(alert, ['vt_suspicious']) },
       { label: 'VT Undetected', value: this.getNumberText(alert, ['vt_undetected']) },
+      { label: 'VT Tags', value: this.getStringField(alert, ['vt_tags']) || 'N/A' },
+      { label: 'VT AS Owner', value: this.getStringField(alert, ['vt_as_owner']) || 'N/A' },
       { label: 'MISP', value: this.getStringField(alert, ['misp', 'misp_ioc', 'misp_event_id']) || 'N/A' },
       { label: 'Geo IP', value: this.getStringField(alert, ['geo_ip', 'geoip_country', 'geoip']) || 'N/A' },
-      { label: 'Taxonomies', value: this.getStringField(alert, ['cortex_taxonomies']) || 'N/A' }
+      { label: 'Reverse DNS', value: this.getStringField(alert, ['rdns']) || 'N/A' },
+      { label: 'AbuseIPDB Score', value: this.getNumberText(alert, ['abuseipdb_score']) },
+      { label: 'Abuse Reports', value: this.getNumberText(alert, ['abuseipdb_total_reports']) },
+      { label: 'Taxonomies', value: this.getStringField(alert, ['cortex_taxonomies']) || 'N/A' },
+      { label: 'IRIS Severity', value: this.getStringField(alert, ['iris_severity_name']) || 'N/A' },
+      { label: 'IRIS Source', value: this.getStringField(alert, ['iris_alert_source']) || 'N/A' },
+      { label: 'Enrichment Status', value: this.getStringField(alert, ['enrichment_status', 'internal_enrichment_status', 'external_enrichment_status']) || 'N/A' },
+      { label: 'Enrichment Sources', value: this.getStringField(alert, ['enrichment_sources', 'internal_enrichment_sources', 'external_enrichment_sources']) || 'N/A' },
+      { label: 'Enrichment Summary', value: this.getStringField(alert, ['enrichment_summary', 'internal_enrichment_summary', 'external_enrichment_summary']) || 'N/A' }
     ];
   }
 
-  getWorkflowSoc(): Array<{ label: string; value: string }> {
-    return [
-      { label: '1. Wazuh', value: 'Detection & alert generation' },
-      { label: '2. n8n', value: 'Orchestration & enrichment trigger' },
-      { label: '3. AI', value: 'Scoring, decision, confidence' },
-      { label: '4. Cortex', value: 'Analyzer context & IOC enrichment' },
-      { label: '5. IRIS', value: 'Case management & analyst workflow' }
-    ];
+  getExternalEnrichmentStatus(alert: AlertItem): string {
+    return this.getStringField(alert, ['enrichment_status', 'internal_enrichment_status', 'external_enrichment_status']) || 'database-only';
   }
 
-  getTimeline(alert: AlertItem): Array<{ label: string; value: string }> {
-    const events: Array<{ label: string; date: Date }> = [];
-    const dateFields = [
-      { key: 'detected', label: 'Detected' },
-      { key: 'detected_at', label: 'Detected At' },
-      { key: 'date', label: 'Event Date' },
-      { key: 'timestamp', label: 'Timestamp' },
-      { key: 'created_at', label: 'Created At' }
-    ];
+  getExternalEnrichmentSummary(alert: AlertItem): string {
+    const summary = this.getStringField(alert, ['enrichment_summary', 'internal_enrichment_summary', 'external_enrichment_summary']);
+    if (summary) return summary;
 
-    for (const field of dateFields) {
-      const value = this.getRawField(alert, [field.key]);
-      const parsed = this.parseDate(value);
-      if (parsed) {
-        events.push({ label: field.label, date: parsed });
-      }
+    const status = this.getExternalEnrichmentStatus(alert);
+    if (status === 'database-sufficient') {
+      return 'Threat context is already present in the stored alert data.';
     }
 
-    const idDate = this.getAlertTime(alert);
-    if (!Number.isNaN(idDate.getTime())) {
-      events.push({ label: 'Mongo Created (ObjectId)', date: idDate });
-    }
-
-    const uniq = new Map<string, { label: string; date: Date }>();
-    for (const event of events) {
-      const key = `${event.label}-${event.date.toISOString()}`;
-      if (!uniq.has(key)) uniq.set(key, event);
-    }
-
-    return [...uniq.values()]
-      .sort((a, b) => a.date.getTime() - b.date.getTime())
-      .map(e => ({ label: e.label, value: e.date.toLocaleString() }));
+    return 'No external enrichment context is currently visible for this alert.';
   }
 
-  getLimitations(alert: AlertItem): string[] {
-    const limitations: string[] = [];
-    const missingCritical = [
-      this.getRawField(alert, ['rule_level']) === null,
-      this.getRawField(alert, ['fired_times']) === null,
-      !this.getStringField(alert, ['src_ip']),
-      this.getRawField(alert, ['vt_malicious']) === null && this.getRawField(alert, ['vt_suspicious']) === null
-    ].filter(Boolean).length;
-
-    if (missingCritical >= 2) {
-      limitations.push('Risque de sous-evaluation: plusieurs champs d entree sont manquants.');
-    }
-    limitations.push('Faux positifs possibles lorsque le contexte metier n est pas present dans l alerte.');
-    limitations.push('Le score depend de la qualite de l enrichissement (VT/MISP/Geo IP).');
-
-    return limitations;
+  getExternalEnrichmentTone(alert: AlertItem): 'success' | 'warning' | 'neutral' {
+    const status = this.getExternalEnrichmentStatus(alert);
+    if (status === 'external-fallback' || status === 'database-sufficient') return 'success';
+    if (status === 'private-indicator' || status === 'external-unavailable' || status === 'no-indicator') return 'warning';
+    return 'neutral';
   }
 
   getAlertSeverity(alert: AlertItem): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
@@ -520,6 +520,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return !this.hiddenToolTokens.some(token => normalized.includes(token));
   }
 
+  private loadSelectedAlertContext(alert: AlertItem): void {
+    const alertId = this.getAlertId(alert);
+    if (!alertId || alertId === 'unknown') return;
+
+    this.alertsSvc.getAlertContext(alertId).pipe(takeUntil(this.destroy$)).subscribe((enrichedAlert) => {
+      if (!enrichedAlert || !this.selectedAlert) return;
+      if (this.getAlertId(this.selectedAlert) !== alertId) return;
+
+      this.selectedAlert = { ...this.selectedAlert, ...enrichedAlert };
+      this.buildSelectedAlertSparklines(this.selectedAlert);
+      this.cdr.markForCheck();
+    });
+  }
+
   private getRawField(alert: AlertItem, keys: string[]): unknown {
     const source = alert as unknown as Record<string, unknown>;
     for (const key of keys) {
@@ -534,6 +548,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const value = this.getRawField(alert, keys);
     if (value === null) return '';
     if (typeof value === 'string') return value.trim();
+    if (Array.isArray(value)) return value.map((entry) => String(entry)).join(', ');
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
     return '';
   }
@@ -551,10 +566,4 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return String(value);
   }
 
-  private parseDate(value: unknown): Date | null {
-    if (!value) return null;
-    const date = new Date(String(value));
-    if (Number.isNaN(date.getTime())) return null;
-    return date;
-  }
 }

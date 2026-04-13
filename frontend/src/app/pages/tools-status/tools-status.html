@@ -46,6 +46,11 @@
           }
         </div>
 
+        <div class="tool-validation">
+          <span class="validation-chip validation-chip-role">{{ getValidationRole(tool.name) }}</span>
+          <span class="validation-chip validation-chip-stage">{{ getWorkflowStage(tool.name) }}</span>
+        </div>
+
         <!-- Metrics -->
         <div class="tool-metrics">
           @for (metric of getVisibleMetrics(tool); track metric.label) {

@@ -23,4 +23,11 @@ export class AlertsService {
       catchError(() => of([]))
     );
   }
+
+  getAlertContext(id: string): Observable<AlertItem | null> {
+    return this.http.get<{ data?: AlertItem }>(`${this.base}/alerts/${id}/context`).pipe(
+      map((res) => res.data ?? null),
+      catchError(() => of(null))
+    );
+  }
 }

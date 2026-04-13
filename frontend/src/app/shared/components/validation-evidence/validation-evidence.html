@@ -1,0 +1,27 @@
+<div class="validation-shell" [class.compact]="compact">
+  @if (headline) {
+    <div class="validation-header">
+      <span class="validation-headline">{{ headline }}</span>
+    </div>
+  }
+
+  <div class="validation-grid" [class.validation-grid-compact]="compact">
+    @for (section of sections; track trackByTitle($index, section)) {
+      <section class="validation-card">
+        <div class="validation-title">{{ section.title }}</div>
+        @if (section.subtitle) {
+          <div class="validation-subtitle">{{ section.subtitle }}</div>
+        }
+
+        <div class="validation-items">
+          @for (item of section.items; track trackByLabel($index, item)) {
+            <div class="validation-item" [class]="'tone-' + (item.tone || 'neutral')">
+              <span class="validation-label">{{ item.label }}</span>
+              <span class="validation-value">{{ item.value }}</span>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  </div>
+</div>

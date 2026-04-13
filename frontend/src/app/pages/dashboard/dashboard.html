@@ -76,6 +76,19 @@
           <div class="detail-item detail-item-wide"><span class="label">AI Explanation</span><span class="value">{{ getAiExplanation(selectedAlert) }}</span></div>
         </div>
 
+        <div class="enrichment-banner" [class]="'tone-' + getExternalEnrichmentTone(selectedAlert)">
+          <div class="enrichment-top">
+            <span class="enrichment-title">EXTERNAL ENRICHMENT</span>
+            <span class="enrichment-status mono">{{ getExternalEnrichmentStatus(selectedAlert) }}</span>
+          </div>
+          <div class="enrichment-summary">{{ getExternalEnrichmentSummary(selectedAlert) }}</div>
+          <div class="enrichment-meta mono">
+            <span>Indicator: {{ selectedAlert.enrichment_indicator || selectedAlert.internal_enrichment_indicator || selectedAlert.external_enrichment_indicator || selectedAlert.src_ip || selectedAlert.iris_alert_source || 'N/A' }}</span>
+            <span>Sources: {{ selectedAlert.enrichment_sources?.join(', ') || selectedAlert.internal_enrichment_sources?.join(', ') || selectedAlert.external_enrichment_sources?.join(', ') || 'none' }}</span>
+            <span>Checked: {{ selectedAlert.enrichment_checked?.join(', ') || selectedAlert.internal_enrichment_checked?.join(', ') || selectedAlert.external_enrichment_checked?.join(', ') || 'none' }}</span>
+          </div>
+        </div>
+
         <div class="all-details-panel" style="margin-top: 14px;">
           <div class="all-details-title">Model Inputs</div>
           <div class="all-details-grid">
@@ -95,48 +108,6 @@
               <div class="all-detail-item">
                 <span class="all-detail-label">{{ intel.label }}</span>
                 <span class="all-detail-value mono">{{ intel.value }}</span>
-              </div>
-            }
-          </div>
-        </div>
-
-        <div class="all-details-panel">
-          <div class="all-details-title">Workflow SOC</div>
-          <div class="all-details-grid">
-            @for (step of getWorkflowSoc(); track trackByLabel($index, step)) {
-              <div class="all-detail-item all-detail-item-wide">
-                <span class="all-detail-label">{{ step.label }}</span>
-                <span class="all-detail-value">{{ step.value }}</span>
-              </div>
-            }
-          </div>
-        </div>
-
-        <div class="all-details-panel">
-          <div class="all-details-title">Timeline</div>
-          <div class="all-details-grid">
-            @for (event of getTimeline(selectedAlert); track trackByLabel($index, event)) {
-              <div class="all-detail-item">
-                <span class="all-detail-label">{{ event.label }}</span>
-                <span class="all-detail-value mono">{{ event.value }}</span>
-              </div>
-            }
-            @if (!getTimeline(selectedAlert).length) {
-              <div class="all-detail-item all-detail-item-wide">
-                <span class="all-detail-label">Timeline</span>
-                <span class="all-detail-value">Aucune date exploitable disponible dans l alerte.</span>
-              </div>
-            }
-          </div>
-        </div>
-
-        <div class="all-details-panel">
-          <div class="all-details-title">Limitations</div>
-          <div class="all-details-grid">
-            @for (limitation of getLimitations(selectedAlert); track limitation) {
-              <div class="all-detail-item all-detail-item-wide">
-                <span class="all-detail-label">Constraint</span>
-                <span class="all-detail-value">{{ limitation }}</span>
               </div>
             }
           </div>

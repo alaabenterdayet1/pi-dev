@@ -57,6 +57,11 @@
 .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(30,45,78,0.5); font-size: 13px; }
 .detail-row { color: #E2E8F0; }
 .detail-row:last-child { border: none; }
+.validation-drawer-section { padding: 14px; }
+.enrichment-section.tone-success { border-color: rgba(0,227,150,0.28); }
+.enrichment-section.tone-warning { border-color: rgba(255,140,0,0.3); }
+.enrichment-status-line { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.enrichment-meta { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 10px; color: #94A3B8; }
 .detail-label { color: #64748B; font-size: 12px; }
 .detail-value { color: #E2E8F0; text-align: right; max-width: 60%; word-break: break-word; }
 .detail-paragraph { color: #E2E8F0; font-size: 13px; line-height: 1.5; }

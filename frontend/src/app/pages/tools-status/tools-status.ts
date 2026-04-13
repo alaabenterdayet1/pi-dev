@@ -8,6 +8,7 @@ import { takeUntil } from 'rxjs/operators';
 
 import { ToolsService } from '../../core/services/tools.service';
 import { ToolStatus } from '../../core/models/tool-status.model';
+import { getToolValidationRole, getToolWorkflowStage } from '../../core/utils/validation-guidance.util';
 
 @Component({
   selector: 'app-tools-status',
@@ -74,6 +75,14 @@ export class ToolsStatusComponent implements OnInit, OnDestroy {
   getVisibleMetrics(tool: ToolStatus): ToolStatus['metrics'] {
     if (this.isExpanded(tool.name)) return tool.metrics;
     return tool.metrics.slice(0, 4);
+  }
+
+  getValidationRole(toolName: string): string {
+    return getToolValidationRole(toolName);
+  }
+
+  getWorkflowStage(toolName: string): string {
+    return getToolWorkflowStage(toolName);
   }
 
   hasMoreMetrics(tool: ToolStatus): boolean {

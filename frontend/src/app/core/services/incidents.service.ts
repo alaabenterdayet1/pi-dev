@@ -52,6 +52,16 @@ export class IncidentsService {
     );
   }
 
+  getIncidentContext(id: string): Observable<Incident | null> {
+    return this.http.get<{ data?: AlertItem }>(`${this.base}/alerts/${id}/context`).pipe(
+      map((res) => {
+        if (!res.data) return null;
+        return this.mapAlertToIncident(res.data);
+      }),
+      catchError(() => of(null))
+    );
+  }
+
   getIncidentScore(id: string): Observable<AiScore> {
     return this.getIncidentById(id).pipe(
       map((incident) => {
