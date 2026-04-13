@@ -12,6 +12,9 @@ export interface AlertItem {
   src_ip?: string;
   src_port?: string;
   dst_user?: string;
+  user?: string;
+  username?: string;
+  dstuser?: string;
   log_program?: string;
   log_location?: string;
   decoder_name?: string;
@@ -28,6 +31,20 @@ export interface AlertItem {
   fw_action_type?: string;
   fw_interface?: string;
   fw_source_blocked?: string;
+  date?: string;
+  detected?: string;
+  detected_at?: string;
+  timestamp?: string;
+  created_at?: string;
+  failed_attempts?: number;
+  failed_logins?: number;
+  auth_failures?: number;
+  geo_ip?: string;
+  geoip?: string;
+  geoip_country?: string;
+  misp?: string;
+  misp_ioc?: string;
+  misp_event_id?: string;
   alert_status?: 'OPEN' | 'INVESTIGATING' | 'CLOSED';
 
   severity?: string;
@@ -36,8 +53,10 @@ export interface AlertItem {
   ai_classification?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   ai_decision?: 'ISOLATE' | 'ESCALATE' | 'INVESTIGATE' | 'MONITOR';
   ai_confidence?: number;
+  ai_score?: number;
   ai_risk_score?: number;
   ai_recommendation?: string;
+  mttd_minutes?: number;
 }
 
 export interface AlertsResponse {

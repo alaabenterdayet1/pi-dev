@@ -39,19 +39,6 @@
     ]
   },
   {
-    "name": "SOAR / n8n",
-    "role": "Security Orchestration",
-    "network": "SOC",
-    "ip": "192.168.10.20",
-    "status": "ONLINE",
-    "icon": "auto_fix_high",
-    "metrics": [
-      { "label": "Workflows", "value": "12" },
-      { "label": "Executions", "value": "87" },
-      { "label": "Failed", "value": "2" }
-    ]
-  },
-  {
     "name": "Snort",
     "role": "Network IDS",
     "network": "DMZ",

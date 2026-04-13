@@ -22,7 +22,7 @@
           </div>
           <div class="inc-type">{{ getAlertTitle(alert) }}</div>
           <div class="inc-bottom">
-            <span class="inc-asset text-secondary">{{ alert.src_ip || alert.iris_alert_source || 'Unknown source' }}</span>
+            <span class="inc-asset text-secondary">{{ getAssetIdentity(alert) }}</span>
             <span class="inc-score mono">{{ getAlertConfidence(alert) }}</span>
           </div>
           <div class="inc-reco text-secondary">{{ alert.alert_status || 'OPEN' }}</div>
@@ -69,6 +69,77 @@
           <div class="detail-item"><span class="label">MITRE IDs</span><span class="value mono">{{ selectedAlert.mitre_ids || 'N/A' }}</span></div>
           <div class="detail-item"><span class="label">Firewall Action</span><span class="value mono">{{ selectedAlert.fw_action_type || 'N/A' }}</span></div>
           <div class="detail-item"><span class="label">Agent</span><span class="value mono">{{ selectedAlert.agent_name || 'N/A' }}</span></div>
+          <div class="detail-item"><span class="label">AI Score</span><span class="value mono">{{ getAiScoreText(selectedAlert) }}</span></div>
+          <div class="detail-item"><span class="label">Priority Rank</span><span class="value mono">{{ getPriorityRank(selectedAlert) }}</span></div>
+          <div class="detail-item detail-item-wide"><span class="label">AI Decision</span><span class="value mono">{{ getDecision(selectedAlert) }}</span></div>
+          <div class="detail-item detail-item-wide"><span class="label">AI Decision Explanation</span><span class="value">{{ getDecisionExplanation(selectedAlert) }}</span></div>
+          <div class="detail-item detail-item-wide"><span class="label">AI Explanation</span><span class="value">{{ getAiExplanation(selectedAlert) }}</span></div>
+        </div>
+
+        <div class="all-details-panel" style="margin-top: 14px;">
+          <div class="all-details-title">Model Inputs</div>
+          <div class="all-details-grid">
+            @for (input of getModelInputs(selectedAlert); track trackByLabel($index, input)) {
+              <div class="all-detail-item">
+                <span class="all-detail-label">{{ input.label }}</span>
+                <span class="all-detail-value mono">{{ input.value }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="all-details-panel">
+          <div class="all-details-title">Threat Intelligence</div>
+          <div class="all-details-grid">
+            @for (intel of getThreatIntelligence(selectedAlert); track trackByLabel($index, intel)) {
+              <div class="all-detail-item">
+                <span class="all-detail-label">{{ intel.label }}</span>
+                <span class="all-detail-value mono">{{ intel.value }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="all-details-panel">
+          <div class="all-details-title">Workflow SOC</div>
+          <div class="all-details-grid">
+            @for (step of getWorkflowSoc(); track trackByLabel($index, step)) {
+              <div class="all-detail-item all-detail-item-wide">
+                <span class="all-detail-label">{{ step.label }}</span>
+                <span class="all-detail-value">{{ step.value }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="all-details-panel">
+          <div class="all-details-title">Timeline</div>
+          <div class="all-details-grid">
+            @for (event of getTimeline(selectedAlert); track trackByLabel($index, event)) {
+              <div class="all-detail-item">
+                <span class="all-detail-label">{{ event.label }}</span>
+                <span class="all-detail-value mono">{{ event.value }}</span>
+              </div>
+            }
+            @if (!getTimeline(selectedAlert).length) {
+              <div class="all-detail-item all-detail-item-wide">
+                <span class="all-detail-label">Timeline</span>
+                <span class="all-detail-value">Aucune date exploitable disponible dans l alerte.</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="all-details-panel">
+          <div class="all-details-title">Limitations</div>
+          <div class="all-details-grid">
+            @for (limitation of getLimitations(selectedAlert); track limitation) {
+              <div class="all-detail-item all-detail-item-wide">
+                <span class="all-detail-label">Constraint</span>
+                <span class="all-detail-value">{{ limitation }}</span>
+              </div>
+            }
+          </div>
         </div>
 
         <div class="details-actions">

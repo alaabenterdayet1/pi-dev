@@ -183,9 +183,131 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getScoreColor(s: number): string { return s >= 70 ? '#FF4560' : s >= 40 ? '#FF8C00' : '#00E396'; }
   trackById = (_: number, i: Incident) => i.id;
+  trackByLabel = (_: number, item: { label: string }) => item.label;
 
   getDisplaySeverity(incident: Incident): string {
-    return incident.classificationSeverity || incident.severity;
+    return this.normalizeSeverityLabel(incident.classificationSeverity || incident.severity);
+  }
+
+  getProfessionalAsset(incident: Incident): string {
+    const raw = incident.rawDetails ?? {};
+    const parts = [
+      this.cleanText(raw['agent_name']),
+      this.cleanText(incident.targetIp || raw['src_ip']),
+      this.cleanText(raw['dst_user'] || raw['dstuser'] || raw['user'] || raw['username']),
+    ].filter(Boolean) as string[];
+
+    return parts.length ? parts.join(' | ') : this.cleanText(incident.asset) || 'Asset non renseigne en DB';
+  }
+
+  getPriority(incident: Incident): 'P1' | 'P2' | 'P3' | 'P4' {
+    const score = Number(incident.aiScore || 0);
+    if (score >= 85) return 'P1';
+    if (score >= 65) return 'P2';
+    if (score >= 40) return 'P3';
+    return 'P4';
+  }
+
+  getExplanation(incident: Incident): string {
+    const raw = incident.rawDetails ?? {};
+    const reasons: string[] = [];
+    const level = this.asNumber(raw['rule_level']);
+    const fired = this.asNumber(raw['fired_times']);
+    const malicious = this.asNumber(raw['vt_malicious']);
+    const suspicious = this.asNumber(raw['vt_suspicious']);
+    const action = this.cleanText(raw['fw_action_type']).toLowerCase();
+
+    if (incident.aiScore >= 65) reasons.push(`score eleve (${incident.aiScore})`);
+    if (level >= 10) reasons.push(`rule_level eleve (${level})`);
+    if (fired >= 5) reasons.push(`repetition alerte (${fired})`);
+    if (malicious > 0 || suspicious >= 3) reasons.push(`indicateurs TI suspects (m=${malicious}, s=${suspicious})`);
+    if (action === 'block') reasons.push('firewall deja en blocage');
+
+    if (!reasons.length) {
+      return 'Decision basee sur risque modere, avec surveillance continue et verification contextuelle SOC.';
+    }
+
+    return `Decision ${incident.decision} expliquee par ${reasons.join(', ')}.`;
+  }
+
+  getModelInputs(incident: Incident): Array<{ label: string; value: string }> {
+    const raw = incident.rawDetails ?? {};
+    const alertType = this.cleanText(raw['iris_alert_title']) || this.cleanText(raw['rule_description']) || this.cleanText(incident.type) || 'Type non renseigne en DB';
+    const ruleId = this.cleanText(raw['rule_id']) || incident.id;
+    const sourceIp = this.cleanText(incident.targetIp || raw['src_ip']) || 'IP source non renseignee';
+    const sourcePort = this.cleanText(raw['src_port']) || 'Port non fourni';
+    const program = this.cleanText(raw['log_program']) || this.cleanText(raw['decoder_name']) || 'Programme non renseigne';
+    const action = this.cleanText(raw['fw_action_type']) || 'Action firewall non renseignee';
+
+    return [
+      { label: 'Alert Type', value: alertType },
+      { label: 'Rule ID', value: ruleId },
+      { label: 'Rule Level', value: this.toValue(raw['rule_level']) },
+      { label: 'Fired Times', value: this.toValue(raw['fired_times']) },
+      { label: 'Source IP', value: sourceIp },
+      { label: 'Source Port', value: sourcePort },
+      { label: 'Program', value: program },
+      { label: 'Firewall Action', value: action },
+    ];
+  }
+
+  getCti(incident: Incident): Array<{ label: string; value: string }> {
+    const raw = incident.rawDetails ?? {};
+    const vtReputation = this.toValue(raw['vt_reputation']);
+    const vtMalicious = this.toValue(raw['vt_malicious']);
+    const vtSuspicious = this.toValue(raw['vt_suspicious']);
+    const vtUndetected = this.toValue(raw['vt_undetected']);
+    const misp = this.cleanText(raw['misp'] || raw['misp_ioc'] || raw['misp_event_id']) || 'Aucun enrichissement MISP en DB';
+    const geoIp = this.cleanText(raw['geo_ip'] || raw['geoip'] || raw['geoip_country']) || 'GeoIP non enrichi';
+    const taxonomies = this.cleanText(raw['cortex_taxonomies']) || 'Aucune taxonomie CTI';
+
+    return [
+      { label: 'VT Reputation', value: vtReputation },
+      { label: 'VT Malicious', value: vtMalicious },
+      { label: 'VT Suspicious', value: vtSuspicious },
+      { label: 'VT Undetected', value: vtUndetected },
+      { label: 'MISP', value: misp },
+      { label: 'Geo IP', value: geoIp },
+      { label: 'Taxonomies', value: taxonomies },
+    ];
+  }
+
+  getTimelineProfessional(incident: Incident): Array<{ label: string; value: string }> {
+    const raw = incident.rawDetails ?? {};
+    const events: Array<{ label: string; date: Date }> = [];
+
+    const fields: Array<{ key: string; label: string }> = [
+      { key: '@timestamp', label: 'Detected' },
+      { key: 'timestamp', label: 'Timestamp' },
+      { key: 'detected', label: 'Detected At' },
+      { key: 'detected_at', label: 'Detected At' },
+      { key: 'created_at', label: 'Created At' },
+      { key: 'date', label: 'Event Date' },
+    ];
+
+    for (const field of fields) {
+      const value = raw[field.key];
+      const parsed = this.parseDate(value);
+      if (parsed) events.push({ label: field.label, date: parsed });
+    }
+
+    const detectedAt = this.parseDate(incident.detectedAt);
+    if (detectedAt) events.push({ label: 'Incident Detected', date: detectedAt });
+
+    for (const item of incident.timeline || []) {
+      const parsed = this.parseDate(item.timestamp);
+      if (parsed) events.push({ label: item.event, date: parsed });
+    }
+
+    const unique = new Map<string, { label: string; date: Date }>();
+    for (const event of events) {
+      const key = `${event.label}-${event.date.toISOString()}`;
+      if (!unique.has(key)) unique.set(key, event);
+    }
+
+    return [...unique.values()]
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .map(event => ({ label: event.label, value: event.date.toLocaleString() }));
   }
 
   getAllDetailEntries(incident: Incident): Array<{ key: string; label: string; value: string; isLong: boolean }> {
@@ -217,6 +339,16 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
     return String(value || '').trim().toUpperCase();
   }
 
+  private normalizeSeverityLabel(value: string): string {
+    const normalized = this.normalizeSeverityValue(value);
+    if (normalized === 'INFORMATIONAL' || normalized === 'INFO') return 'LOW';
+    if (normalized === 'CRITICAL') return 'CRITICAL';
+    if (normalized === 'HIGH') return 'HIGH';
+    if (normalized === 'MEDIUM') return 'MEDIUM';
+    if (normalized === 'LOW') return 'LOW';
+    return normalized || 'LOW';
+  }
+
   private matchesIpFilter(incident: Incident, value: string): boolean {
     const filter = String(value || '').trim().toLowerCase();
     if (!filter) return true;
@@ -239,6 +371,41 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
         .join(' | ');
     }
     return String(value);
+  }
+
+  private toValue(value: unknown): string {
+    const clean = this.cleanText(value);
+    return clean || 'Non renseigne en DB';
+  }
+
+  private parseDate(value: unknown): Date | null {
+    if (!value) return null;
+    if (typeof value === 'string') {
+      const trimmed = value.trim().toLowerCase();
+      if (!trimmed || trimmed === 'nan' || trimmed === 'null' || trimmed === 'undefined') return null;
+      if (/^\d+$/.test(trimmed)) {
+        const n = Number(trimmed);
+        const dateFromNum = new Date(n > 1e12 ? n : n * 1000);
+        if (!Number.isNaN(dateFromNum.getTime())) return dateFromNum;
+      }
+    }
+    const date = new Date(String(value));
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
+  }
+
+  private cleanText(value: unknown): string {
+    if (value === undefined || value === null) return '';
+    const str = String(value).trim();
+    if (!str) return '';
+    const lowered = str.toLowerCase();
+    if (lowered === 'nan' || lowered === 'null' || lowered === 'undefined' || lowered === '-') return '';
+    return str;
+  }
+
+  private asNumber(value: unknown): number {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
   }
 
   exportCsv(): void {

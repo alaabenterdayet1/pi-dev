@@ -3,17 +3,16 @@ const path = require('path');
 const fs = require('fs/promises');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
-const { classifyAlert } = require('../services/alertAiService');
+const {
+  enrichAlertFromReport,
+  enrichAlertsFromReport,
+  scoreThreatFeatures,
+} = require('../services/aiScoringService');
 
 const execFileAsync = promisify(execFile);
 
 const stripAiFields = (alertDoc) => {
   const alert = typeof alertDoc.toObject === 'function' ? alertDoc.toObject() : { ...alertDoc };
-  delete alert.ai_classification;
-  delete alert.ai_decision;
-  delete alert.ai_confidence;
-  delete alert.ai_risk_score;
-  delete alert.ai_recommendation;
   return alert;
 };
 
@@ -21,7 +20,7 @@ const getLatestAlerts = async (req, res) => {
   try {
     const limit = Math.max(1, Math.min(Number(req.query.limit) || 5, 50));
     const alerts = await Alert.find().sort({ _id: -1 }).limit(limit);
-    const sanitizedAlerts = alerts.map(stripAiFields);
+    const sanitizedAlerts = await enrichAlertsFromReport(alerts);
 
     res.status(200).json({
       count: sanitizedAlerts.length,
@@ -36,7 +35,7 @@ const getLatestAlerts = async (req, res) => {
 const getAllAlerts = async (req, res) => {
   try {
     const alerts = await Alert.find().sort({ _id: -1 });
-    const sanitizedAlerts = alerts.map(stripAiFields);
+    const sanitizedAlerts = await enrichAlertsFromReport(alerts);
 
     res.status(200).json({
       count: sanitizedAlerts.length,
@@ -54,16 +53,17 @@ const classifyAlertById = async (req, res) => {
       return res.status(404).json({ message: 'Alert not found' });
     }
 
-    const ai = classifyAlert(alert.toObject());
+    const ai = await enrichAlertFromReport(alert);
+    const calculated = scoreThreatFeatures(alert.toObject());
     const updated = await Alert.findByIdAndUpdate(
       req.params.id,
       {
         $set: {
-          ai_classification: ai.ai_classification,
-          ai_decision: ai.ai_decision,
-          ai_confidence: ai.ai_confidence,
-          ai_risk_score: ai.ai_risk_score,
-          ai_recommendation: ai.ai_recommendation,
+          ai_classification: ai.ai_classification || calculated.decision,
+          ai_decision: ai.ai_decision || calculated.decision,
+          ai_confidence: ai.ai_confidence ?? calculated.confidence,
+          ai_risk_score: ai.ai_risk_score ?? calculated.score,
+          ai_recommendation: ai.ai_recommendation || 'See AI scoring report',
         },
       },
       { new: true }
@@ -71,7 +71,7 @@ const classifyAlertById = async (req, res) => {
 
     res.status(200).json({
       message: 'Alert classified successfully',
-      data: updated,
+      data: await enrichAlertFromReport(updated),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

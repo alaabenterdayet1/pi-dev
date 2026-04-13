@@ -7,7 +7,7 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <span class="badge" [class]="'badge-' + severity.toLowerCase()">{{ severity }}</span>
+    <span class="badge" [class]="'badge-' + normalizedSeverity.toLowerCase()">{{ normalizedSeverity }}</span>
   `,
   styles: [`
     .badge {
@@ -28,4 +28,14 @@ import { CommonModule } from '@angular/common';
 })
 export class SeverityBadgeComponent {
   @Input() severity: string = 'LOW';
+
+  get normalizedSeverity(): string {
+    const value = String(this.severity || '').trim().toUpperCase();
+    if (value === 'INFORMATIONAL' || value === 'INFO') return 'LOW';
+    if (value === 'CRITICAL') return 'CRITICAL';
+    if (value === 'HIGH') return 'HIGH';
+    if (value === 'MEDIUM') return 'MEDIUM';
+    if (value === 'LOW') return 'LOW';
+    return 'LOW';
+  }
 }

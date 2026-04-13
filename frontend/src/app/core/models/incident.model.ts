@@ -6,7 +6,7 @@ export interface Incident {
   type: string;
   asset: string;
   aiScore: number;
-  decision: 'ISOLATE' | 'ESCALATE' | 'MONITOR';
+  decision: 'ISOLATE' | 'ESCALATE' | 'INVESTIGATE' | 'MONITOR';
   confidence: number;
   classificationConfidence?: string;
   confidenceRaw?: number;

@@ -55,9 +55,11 @@
 .drawer-section { border: 1px solid #1E2D4E; border-radius: 8px; padding: 12px; }
 .drawer-subtitle { font-family: 'Rajdhani', sans-serif; font-size: 11px; color: #64748B; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
 .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(30,45,78,0.5); font-size: 13px; }
+.detail-row { color: #E2E8F0; }
 .detail-row:last-child { border: none; }
 .detail-label { color: #64748B; font-size: 12px; }
 .detail-value { color: #E2E8F0; text-align: right; max-width: 60%; word-break: break-word; }
+.detail-paragraph { color: #E2E8F0; font-size: 13px; line-height: 1.5; }
 .detail-row.detail-full { display: block; }
 .detail-row.detail-full .detail-label { display: block; margin-bottom: 3px; }
 .detail-row.detail-full .detail-value { display: block; max-width: 100%; text-align: left; }

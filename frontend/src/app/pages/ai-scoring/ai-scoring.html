@@ -1,130 +1,220 @@
-<div class="ai-scoring-layout">
-
-  <!-- Simulator -->
-  <div class="simulator-card glass-card">
-    <div class="card-header">
-      <span class="material-icons text-violet">psychology</span>
-      <span class="card-title">AI THREAT SCORING SIMULATOR</span>
+<div class="ai-scoring-page">
+  <header class="top-strip glass-card fade-in-up">
+    <div class="top-strip-left">
+      <span class="material-icons text-cyan">psychology</span>
+      <div>
+        <div class="brand-name">AI SCORING ANALYZER</div>
+        <div class="brand-subtitle text-secondary">SELECTION D'ALERTE + ANALYSE DETAILLEE</div>
+      </div>
     </div>
-    <div class="simulator-form">
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Threat Type</label>
-          <mat-select [(ngModel)]="features.threatType">
-            @for (t of threatTypes; track t) { <mat-option [value]="t">{{ t }}</mat-option> }
-          </mat-select>
+    <div class="top-strip-right mono">{{ incidents.length }} ALERTES</div>
+  </header>
+
+  @if (pipelineSummary) {
+    <section class="glass-card summary-strip">
+      <div class="card-header">
+        <span class="material-icons text-cyan">analytics</span>
+        <span class="card-title">ALERT SCORING PIPELINE - SUMMARY</span>
+      </div>
+
+      <div class="summary-grid">
+        @for (item of summaryCards; track item.label) {
+          <article class="kpi-card">
+            <span class="kpi-label">{{ item.label }}</span>
+            <span class="kpi-value mono" [style.color]="item.tone">{{ item.value }}</span>
+          </article>
+        }
+      </div>
+
+      <div class="summary-meta mono text-secondary">
+        <span>Model: {{ pipelineSummary.modelType }} ({{ pipelineSummary.modelSource }})</span>
+        <span>Generated: {{ pipelineSummary.generatedAt ? (pipelineSummary.generatedAt | date:'dd/MM/yyyy HH:mm:ss') : '--' }}</span>
+      </div>
+
+      <div class="charts-grid summary-charts">
+        <div class="chart-card">
+          <div class="chart-title">DECISION DISTRIBUTION</div>
+          <apx-chart
+            [series]="decisionChart.series"
+            [chart]="decisionChart.chart"
+            [labels]="decisionChart.labels"
+            [colors]="decisionChart.colors"
+            [legend]="decisionChart.legend"
+            [stroke]="decisionChart.stroke"
+            [dataLabels]="decisionChart.dataLabels"
+            [theme]="decisionChart.theme"></apx-chart>
         </div>
-        <div class="form-group">
-          <label class="form-label">Asset Type</label>
-          <mat-select [(ngModel)]="features.assetType">
-            @for (a of assetTypes; track a) { <mat-option [value]="a">{{ a }}</mat-option> }
-          </mat-select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">User Role</label>
-          <mat-select [(ngModel)]="features.userRole">
-            @for (r of userRoles; track r) { <mat-option [value]="r">{{ r }}</mat-option> }
-          </mat-select>
+
+        <div class="chart-card">
+          <div class="chart-title">SCORE BANDS (ALL ALERTS)</div>
+          <apx-chart
+            [series]="scoreBandsChart.series"
+            [chart]="scoreBandsChart.chart"
+            [xaxis]="scoreBandsChart.xaxis"
+            [yaxis]="scoreBandsChart.yaxis"
+            [plotOptions]="scoreBandsChart.plotOptions"
+            [colors]="scoreBandsChart.colors"
+            [dataLabels]="scoreBandsChart.dataLabels"
+            [grid]="scoreBandsChart.grid"
+            [theme]="scoreBandsChart.theme"></apx-chart>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Alert Severity: <span class="mono text-cyan">{{ features.alertSeverity }}/4</span></label>
-          <mat-slider min="1" max="4" step="1" discrete class="severity-slider">
-            <input matSliderThumb [(ngModel)]="features.alertSeverity">
-          </mat-slider>
-        </div>
-        <div class="form-group toggle-group">
-          <label class="form-label">IOC Presence</label>
-          <mat-slide-toggle [(ngModel)]="features.iocPresence" color="accent">
-            {{ features.iocPresence ? 'Confirmed' : 'Not Confirmed' }}
-          </mat-slide-toggle>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Historical Incidents (0–50)</label>
-          <mat-form-field appearance="fill" style="width:100%">
-            <input matInput type="number" [(ngModel)]="features.historicalIncidents" min="0" max="50">
-          </mat-form-field>
-        </div>
-      </div>
-      <button mat-flat-button class="btn-cyan calc-btn" (click)="calculate()" [disabled]="loading">
-        @if (loading) { <mat-spinner diameter="18" style="display:inline-block"></mat-spinner> }
-        @else { <mat-icon>calculate</mat-icon> }
-        CALCULATE SCORE
-      </button>
-    </div>
 
-    <!-- Result -->
-    @if (result) {
-      <div class="result-panel">
-        <div class="result-gauge">
-          <app-ai-score-gauge [score]="result.score" [height]="220"></app-ai-score-gauge>
-          <div class="result-decision" [class]="'decision-' + result.decision.toLowerCase()">{{ result.decision }}</div>
-          <div class="result-conf text-secondary mono">Confidence: {{ result.confidence }}%</div>
+      <div class="score-band-inline mono">
+        @for (band of scoreBandStats; track band.label) {
+          <span>{{ band.label }}: {{ band.value }}</span>
+        }
+      </div>
+    </section>
+  }
+
+  <section class="split-layout">
+    <div class="left-panel">
+      <div class="glass-card panel-card">
+        <div class="card-header">
+          <span class="material-icons text-cyan">insights</span>
+          <span class="card-title">DETAILS DE L'ALERTE SELECTIONNEE</span>
         </div>
-        <div class="result-features">
-          <div class="features-title">Feature Contributions</div>
-          @for (fc of result.featureContributions; track fc.feature) {
-            <div class="feature-row">
-              <span class="feature-name text-secondary">{{ fc.feature }}</span>
-              <div class="feature-bar-bg">
-                <div class="feature-bar" [style.width.%]="(fc.points / 30) * 100" [style.background]="getScoreColor(result.score)"></div>
-              </div>
-              <span class="feature-pts mono" [style.color]="getScoreColor(result.score)">+{{ fc.points }}</span>
+
+        @if (selectedIncident) {
+          <div class="selected-head">
+            <div class="selected-main">
+              <app-severity-badge [severity]="selectedIncident.severity"></app-severity-badge>
+              <h2 class="selected-title">{{ selectedType }}</h2>
+              <p class="selected-meta text-secondary mono">{{ selectedDetectedAt }} | Target IP: {{ selectedIp }}</p>
             </div>
-          }
-        </div>
-      </div>
-    }
-  </div>
-
-  <!-- Charts Row -->
-  <div class="charts-row">
-    <div class="glass-card chart-card">
-      <div class="card-header">
-        <span class="material-icons text-cyan">bar_chart</span>
-        <span class="card-title">SCORE DISTRIBUTION (24H)</span>
-      </div>
-      @if (histogramChart.series) {
-        <apx-chart [series]="histogramChart.series" [chart]="histogramChart.chart" [xaxis]="histogramChart.xaxis" [yaxis]="histogramChart.yaxis" [colors]="histogramChart.colors" [plotOptions]="histogramChart.plotOptions" [grid]="histogramChart.grid" [theme]="histogramChart.theme" [dataLabels]="histogramChart.dataLabels"></apx-chart>
-      }
-    </div>
-    <div class="glass-card chart-card">
-      <div class="card-header">
-        <span class="material-icons text-violet">scatter_plot</span>
-        <span class="card-title">DECISIONS TIMELINE</span>
-      </div>
-      @if (timelineChart.series) {
-        <apx-chart [series]="timelineChart.series" [chart]="timelineChart.chart" [xaxis]="timelineChart.xaxis" [yaxis]="timelineChart.yaxis" [colors]="timelineChart.colors" [markers]="timelineChart.markers" [grid]="timelineChart.grid" [theme]="timelineChart.theme"></apx-chart>
-      }
-    </div>
-  </div>
-
-  <!-- Model Metrics -->
-  @if (metrics) {
-    <div class="metrics-row">
-      <div class="glass-card metric-card">
-        <div class="metric-value mono text-cyan">{{ metrics.accuracy }}%</div>
-        <div class="metric-label">Model Accuracy</div>
-      </div>
-      <div class="glass-card metric-card">
-        <div class="metric-value mono text-low">{{ metrics.falsePositiveRate }}%</div>
-        <div class="metric-label">False Positive Rate</div>
-      </div>
-      <div class="glass-card metric-card">
-        <div class="metric-value mono" style="color:#6366F1">{{ metrics.precisionCritical }}%</div>
-        <div class="metric-label">Precision Critical</div>
-      </div>
-      <div class="glass-card metric-card feature-importance">
-        <div class="metric-label" style="margin-bottom:10px">Feature Importance</div>
-        @for (fi of metrics.featureImportance; track fi.feature) {
-          <div class="fi-row">
-            <span class="fi-name text-secondary">{{ fi.feature }}</span>
-            <div class="feature-bar-bg"><div class="feature-bar" [style.width.%]="fi.importance" style="background:#6366F1"></div></div>
-            <span class="fi-pct mono text-cyan">{{ fi.importance }}%</span>
+            <div class="selected-score mono" [style.color]="getScoreColor(selectedIncident.aiScore)">{{ selectedIncident.aiScore }}</div>
           </div>
+
+          <div class="kpi-grid">
+            @for (kpi of selectedStats; track kpi.label) {
+              <article class="kpi-card">
+                <span class="kpi-label">{{ kpi.label }}</span>
+                <span class="kpi-value mono" [style.color]="kpi.tone">{{ kpi.value }}</span>
+              </article>
+            }
+          </div>
+
+          <div class="analyst-summary card-block">
+            <div class="chart-title">ANALYST SUMMARY (AI)</div>
+            <div class="summary-priority mono">Priority: {{ selectedPriority }}</div>
+            <p class="summary-explanation">{{ selectedExplanation }}</p>
+
+            <div class="summary-two-cols">
+              <div>
+                <div class="summary-subtitle">Model Inputs</div>
+                @for (item of selectedInputsSummary; track item.label) {
+                  <div class="summary-row">
+                    <span class="summary-label">{{ item.label }}</span>
+                    <span class="summary-value mono">{{ item.value }}</span>
+                  </div>
+                }
+              </div>
+
+              <div>
+                <div class="summary-subtitle">CTI</div>
+                @for (item of selectedCtiSummary; track item.label) {
+                  <div class="summary-row">
+                    <span class="summary-label">{{ item.label }}</span>
+                    <span class="summary-value mono">{{ item.value }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="summary-subtitle">Limitations</div>
+            <div class="limitations-list">
+              @for (limitation of selectedLimitations; track limitation) {
+                <div class="limitation-item">{{ limitation }}</div>
+              }
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-card">
+              <div class="chart-title">KPI INDEX CHART</div>
+              @if (hasKpiChart) {
+                <apx-chart
+                  [series]="kpiChart.series"
+                  [chart]="kpiChart.chart"
+                  [xaxis]="kpiChart.xaxis"
+                  [yaxis]="kpiChart.yaxis"
+                  [plotOptions]="kpiChart.plotOptions"
+                  [colors]="kpiChart.colors"
+                  [dataLabels]="kpiChart.dataLabels"
+                  [grid]="kpiChart.grid"
+                  [theme]="kpiChart.theme"></apx-chart>
+              } @else {
+                <div class="empty-state">Aucune donnée KPI.</div>
+              }
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-title">MTTD / MTTR</div>
+              @if (hasResponseChart) {
+                <apx-chart
+                  [series]="responseChart.series"
+                  [chart]="responseChart.chart"
+                  [labels]="responseChart.labels"
+                  [colors]="responseChart.colors"
+                  [legend]="responseChart.legend"
+                  [dataLabels]="responseChart.dataLabels"
+                  [stroke]="responseChart.stroke"
+                  [plotOptions]="responseChart.plotOptions"
+                  [theme]="responseChart.theme"></apx-chart>
+              } @else {
+                <div class="empty-state">Aucune donnée MTTD/MTTR.</div>
+              }
+            </div>
+          </div>
+        } @else {
+          <div class="empty-state large">Selectionne une alerte a droite pour voir ses KPI, ses diagrammes et ses temps de reponse.</div>
         }
       </div>
     </div>
-  }
+
+    <aside class="right-panel">
+      <div class="glass-card panel-card">
+        <div class="card-header">
+          <span class="material-icons text-violet">table_view</span>
+          <span class="card-title">ALERTES HISTORIQUE PAR SEVERITY</span>
+        </div>
+
+        <div class="severity-tabs">
+          <button class="sev-tab" [class.active]="activeSeverity === 'LOW'" (click)="setSeverityTab('LOW')">LOW ({{ lowCount }})</button>
+          <button class="sev-tab" [class.active]="activeSeverity === 'MEDIUM'" (click)="setSeverityTab('MEDIUM')">MEDIUM ({{ mediumCount }})</button>
+          <button class="sev-tab" [class.active]="activeSeverity === 'HIGH'" (click)="setSeverityTab('HIGH')">HIGH ({{ highCount }})</button>
+        </div>
+
+        <div class="alerts-table-wrap">
+          <table class="alerts-table">
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Type</th>
+                <th>Asset</th>
+                <th>Score</th>
+                <th>MTTD</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (incident of filteredIncidents; track trackByIncident($index, incident)) {
+                <tr class="row-click" [class.selected]="selectedIncident?.id === incident.id" (click)="selectIncident(incident)">
+                  <td><app-severity-badge [severity]="incident.severity"></app-severity-badge></td>
+                  <td class="td-type">{{ incident.type }}</td>
+                  <td>{{ incident.asset }}</td>
+                  <td class="mono" [style.color]="getScoreColor(incident.aiScore)">{{ incident.aiScore }}</td>
+                  <td class="mono">{{ incident.mttd }}m</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5" class="empty-row">Aucune alerte pour {{ activeSeverity }}.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </aside>
+  </section>
 </div>

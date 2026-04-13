@@ -120,7 +120,8 @@
 
         <div class="drawer-section">
           <div class="detail-row"><span class="detail-label">Type</span><span>{{ selectedIncident.type }}</span></div>
-          <div class="detail-row"><span class="detail-label">Asset</span><span>{{ selectedIncident.asset }}</span></div>
+          <div class="detail-row"><span class="detail-label">Asset</span><span class="mono">{{ getProfessionalAsset(selectedIncident) }}</span></div>
+          <div class="detail-row"><span class="detail-label">Priority</span><span class="mono">{{ getPriority(selectedIncident) }}</span></div>
           <div class="detail-row">
             <span class="detail-label">Status</span>
             <mat-select class="drawer-status-select" [ngModel]="selectedIncident.status" (ngModelChange)="updateStatus(selectedIncident, $event)">
@@ -133,32 +134,6 @@
           <div class="detail-row"><span class="detail-label">Detected</span><span class="mono">{{ selectedIncident.detectedAt | timeAgo }}</span></div>
         </div>
 
-        <!-- IOCs -->
-        @if (selectedIncident.iocs?.length) {
-          <div class="drawer-section">
-            <div class="drawer-subtitle">IOC Indicators</div>
-            @for (ioc of selectedIncident.iocs; track ioc.value) {
-              <div class="ioc-item">
-                <span class="ioc-type">{{ ioc.type }}</span>
-                <span class="ioc-value mono">{{ ioc.value }}</span>
-              </div>
-            }
-          </div>
-        }
-
-        <!-- Timeline -->
-        @if (selectedIncident.timeline?.length) {
-          <div class="drawer-section">
-            <div class="drawer-subtitle">Timeline</div>
-            @for (ev of selectedIncident.timeline; track ev.timestamp) {
-              <div class="timeline-item" [class]="'tl-' + ev.severity.toLowerCase()">
-                <span class="tl-time mono">{{ ev.timestamp | timeAgo }}</span>
-                <span class="tl-event">{{ ev.event }}</span>
-              </div>
-            }
-          </div>
-        }
-
         <!-- AI Score -->
         @if (selectedScore) {
           <div class="drawer-section">
@@ -170,13 +145,43 @@
           </div>
         }
 
-        <!-- All Alert Details -->
         <div class="drawer-section">
-          <div class="drawer-subtitle">Tous Les Details</div>
-          @for (entry of getAllDetailEntries(selectedIncident); track entry.key) {
-            <div class="detail-row" [class.detail-full]="entry.isLong">
-              <span class="detail-label">{{ entry.label }}</span>
-              <span class="detail-value" [class.mono]="!entry.isLong">{{ entry.value }}</span>
+          <div class="drawer-subtitle">AI Explanation</div>
+          <div class="detail-paragraph">{{ getExplanation(selectedIncident) }}</div>
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-subtitle">Model Inputs</div>
+          @for (input of getModelInputs(selectedIncident); track trackByLabel($index, input)) {
+            <div class="detail-row">
+              <span class="detail-label">{{ input.label }}</span>
+              <span class="detail-value mono">{{ input.value }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-subtitle">CTI</div>
+          @for (intel of getCti(selectedIncident); track trackByLabel($index, intel)) {
+            <div class="detail-row">
+              <span class="detail-label">{{ intel.label }}</span>
+              <span class="detail-value mono">{{ intel.value }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="drawer-section">
+          <div class="drawer-subtitle">Timeline</div>
+          @for (event of getTimelineProfessional(selectedIncident); track trackByLabel($index, event)) {
+            <div class="detail-row">
+              <span class="detail-label">{{ event.label }}</span>
+              <span class="detail-value mono">{{ event.value }}</span>
+            </div>
+          }
+          @if (!getTimelineProfessional(selectedIncident).length) {
+            <div class="detail-row detail-full">
+              <span class="detail-label">Timeline</span>
+              <span class="detail-value">Aucune date exploitable disponible.</span>
             </div>
           }
         </div>

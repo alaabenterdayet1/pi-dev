@@ -24,10 +24,9 @@ export class ToolsStatusComponent implements OnInit, OnDestroy {
     wazuh: 'http://192.168.1.36',
     'wazuh agent': 'http://192.168.1.36',
     iris: 'http://192.168.1.35:8000',
-    n8n: 'http://192.168.1.85:5678',
     pfsense: 'http://192.168.1.1',
   };
-  private readonly displayOrder = ['misp', 'wazuh', 'n8n', 'pfsense', 'cortex', 'iris', 'wazuh agent'];
+  private readonly displayOrder = ['misp', 'wazuh', 'pfsense', 'cortex', 'iris', 'wazuh agent'];
 
   private destroy$ = new Subject<void>();
   private cdr = inject(ChangeDetectorRef);

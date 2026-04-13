@@ -58,18 +58,21 @@ export class IncidentsService {
           return this.fallbackScore;
         }
 
-        const decision = incident.decision;
+        const rawDetails = incident.rawDetails as Record<string, unknown> | undefined;
+        const contributions = rawDetails?.['ai_feature_contributions'];
         return {
           score: incident.aiScore,
-          decision,
-          confidence: incident.confidence,
-          featureContributions: [
-            { feature: 'Alert Severity', points: Math.min(30, Math.round(incident.aiScore * 0.35)), weight: 35 },
-            { feature: 'Fired Times', points: Math.min(20, Math.round(incident.mttd * 2)), weight: 25 },
-            { feature: 'Threat Type', points: Math.min(18, Math.round(incident.aiScore * 0.18)), weight: 18 },
-            { feature: 'Source Context', points: Math.min(15, Math.round(incident.confidence * 0.12)), weight: 12 },
-            { feature: 'Historical Data', points: Math.min(10, Math.round(incident.confidence * 0.1)), weight: 10 }
-          ]
+          decision: incident.decision,
+          confidence: incident.classificationConfidence ? Number(incident.classificationConfidence) : incident.confidence,
+          featureContributions: contributions && Array.isArray(contributions)
+            ? (contributions as Array<{ feature: string; points: number; weight: number }>)
+            : [
+                { feature: 'Alert Severity', points: Math.min(30, Math.round(incident.aiScore * 0.35)), weight: 35 },
+                { feature: 'Fired Times', points: Math.min(20, Math.round(incident.mttd * 2)), weight: 25 },
+                { feature: 'Threat Type', points: Math.min(18, Math.round(incident.aiScore * 0.18)), weight: 18 },
+                { feature: 'Source Context', points: Math.min(15, Math.round(incident.confidence * 0.12)), weight: 12 },
+                { feature: 'Historical Data', points: Math.min(10, Math.round(incident.confidence * 0.1)), weight: 10 }
+              ]
         } as AiScore;
       }),
       catchError(() => of(this.fallbackScore))
@@ -92,30 +95,56 @@ export class IncidentsService {
 
   private mapAlertToIncident(alert: AlertItem, classification?: ClassificationItem): Incident {
     const mongoId = this.getAlertId(alert);
-    const severity = this.toSeverity(alert);
-    const decision = this.toDecision(alert, severity);
+    const rawSeverity = this.toSeverity(alert);
     const confidenceRaw = this.toConfidenceRaw(alert);
-    const classificationSeverity = String(classification?.severity ?? '').trim();
-    const classificationConfidence = classification?.confidence !== undefined && classification?.confidence !== null
-      ? String(classification.confidence)
-      : undefined;
+    const targetIp = this.pickFirstString([
+      alert.src_ip,
+      alert.iris_alert_source,
+    ]);
+    const userIdentity = this.pickFirstString([
+      alert.dst_user,
+      alert.dstuser,
+      alert.user,
+      alert.username,
+    ]);
+    const agentName = this.pickFirstString([alert.agent_name]);
+    const ruleText = this.pickFirstString([alert.rule_description, alert.iris_alert_title]);
+    const decoderName = this.pickFirstString([alert.decoder_name]);
+    const type = ruleText || (decoderName ? `Decoder: ${decoderName}` : 'Security Alert');
+    const asset = this.pickFirstString([
+      agentName,
+      targetIp,
+      userIdentity,
+      this.pickFirstString([alert.log_program]),
+    ]) || 'Asset non renseigne en DB';
+
+    const classificationSeverity = String(alert.ai_classification ?? classification?.severity ?? '').trim();
+    const aiScore = this.toScore(alert, rawSeverity);
+    const scoreSeverity = this.scoreToSeverity(aiScore);
+    const sourceSeverity = this.normalizeSeverity(classificationSeverity) ?? this.normalizeSeverity(alert.ai_classification) ?? rawSeverity;
+    const mergedSeverity = this.maxSeverity(sourceSeverity, scoreSeverity);
+    const classificationConfidence = alert.ai_confidence !== undefined && alert.ai_confidence !== null
+      ? String(alert.ai_confidence)
+      : classification?.confidence !== undefined && classification?.confidence !== null
+        ? String(classification.confidence)
+        : undefined;
 
     return {
       id: mongoId,
-      severity,
+      severity: mergedSeverity,
       classificationSeverity,
-      targetIp: alert.src_ip || '',
-      type: alert.rule_description || alert.iris_alert_title || 'Security Alert',
-      asset: alert.agent_name || alert.src_ip || 'Unknown asset',
-      aiScore: this.toScore(alert, severity),
-      decision,
-      confidence: Math.round(confidenceRaw * 100),
+      targetIp,
+      type,
+      asset,
+      aiScore,
+      decision: this.toDecision(alert, mergedSeverity),
+      confidence: alert.ai_confidence ?? Math.round(confidenceRaw * 100),
       classificationConfidence,
       confidenceRaw,
       status: this.toStatus(alert),
       mttd: this.toMttd(alert),
       detectedAt: this.toDetectedAt(alert),
-      assignee: alert.dst_user,
+      assignee: userIdentity,
       iocs: this.toIocs(alert),
       timeline: this.toTimeline(alert),
       rawDetails: this.toRawDetails(alert, mongoId),
@@ -161,6 +190,18 @@ export class IncidentsService {
     return null;
   }
 
+  private scoreToSeverity(score: number): Incident['severity'] {
+    if (score >= 85) return 'CRITICAL';
+    if (score >= 65) return 'HIGH';
+    if (score >= 40) return 'MEDIUM';
+    return 'LOW';
+  }
+
+  private maxSeverity(a: Incident['severity'], b: Incident['severity']): Incident['severity'] {
+    const order: Incident['severity'][] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+    return order[Math.max(order.indexOf(a), order.indexOf(b))];
+  }
+
   private toConfidenceRaw(alert: AlertItem): number {
     const dbConfidence = this.asFiniteNumber(alert.confidence);
     if (dbConfidence !== null) {
@@ -184,17 +225,22 @@ export class IncidentsService {
 
   private toDecision(alert: AlertItem, severity: Incident['severity']): Incident['decision'] {
     const aiDecision = (alert.ai_decision || '').toUpperCase();
-    if (aiDecision === 'ISOLATE' || aiDecision === 'ESCALATE' || aiDecision === 'MONITOR') {
+    if (aiDecision === 'ISOLATE' || aiDecision === 'ESCALATE' || aiDecision === 'INVESTIGATE' || aiDecision === 'MONITOR') {
       return aiDecision;
     }
-    if (aiDecision === 'INVESTIGATE') return 'ESCALATE';
 
     if (severity === 'CRITICAL') return 'ISOLATE';
     if (severity === 'HIGH') return 'ESCALATE';
+    if (severity === 'MEDIUM') return 'INVESTIGATE';
     return 'MONITOR';
   }
 
   private toScore(alert: AlertItem, severity: Incident['severity']): number {
+    if (typeof alert.ai_score === 'number') {
+      const score = alert.ai_score <= 1 ? alert.ai_score * 100 : alert.ai_score;
+      return Math.max(0, Math.min(100, score));
+    }
+
     if (typeof alert.ai_risk_score === 'number') return Math.max(0, Math.min(100, alert.ai_risk_score));
 
     const level = Number(alert.rule_level ?? 0);
@@ -211,35 +257,57 @@ export class IncidentsService {
 
     const action = (alert.fw_action_type || '').toLowerCase();
     if (action === 'block') return 'INVESTIGATING';
+    if ((alert.ai_decision || '').toUpperCase() === 'ESCALATE' || (alert.ai_decision || '').toUpperCase() === 'INVESTIGATE') {
+      return 'INVESTIGATING';
+    }
     if ((alert.vt_malicious ?? 0) > 0) return 'OPEN';
     return 'OPEN';
   }
 
   private toMttd(alert: AlertItem): number {
+    const provided = this.asFiniteNumber(alert.mttd_minutes);
+    if (provided !== null) return Math.max(1, Math.min(240, Math.round(provided * 10) / 10));
+
     const fired = Number(alert.fired_times ?? 1);
     return Math.max(1, Math.min(60, Math.round((10 / Math.max(1, fired)) * 10) / 10));
   }
 
   private toDetectedAt(alert: AlertItem): string {
-    const candidate =
-      (alert as Record<string, unknown>)['@timestamp'] ??
-      (alert as Record<string, unknown>)['timestamp'] ??
-      (alert as Record<string, unknown>)['createdAt'] ??
-      (alert as Record<string, unknown>)['created_at'];
+    const raw = alert as Record<string, unknown>;
+    const candidates = [
+      raw['@timestamp'],
+      raw['timestamp'],
+      raw['detection_date'],
+      raw['detected_at'],
+      raw['detected'],
+      raw['date'],
+      raw['createdAt'],
+      raw['created_at'],
+    ];
 
-    if (typeof candidate === 'string') {
-      const parsed = new Date(candidate);
-      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+    for (const candidate of candidates) {
+      const parsed = this.parseUnknownDate(candidate);
+      if (parsed) return parsed.toISOString();
     }
 
-    return new Date().toISOString();
+    const idDate = this.parseObjectIdDate(this.getAlertId(alert));
+    if (idDate) return idDate.toISOString();
+
+    // Keep deterministic fallback to epoch instead of current system time.
+    return new Date(0).toISOString();
   }
 
   private toIocs(alert: AlertItem): Incident['iocs'] {
     const iocs: Incident['iocs'] = [];
-    if (alert.src_ip) iocs.push({ type: 'IP', value: alert.src_ip });
-    if (alert.mitre_ids) iocs.push({ type: 'BEHAVIOR', value: `MITRE ${alert.mitre_ids}` });
-    if (alert.cortex_taxonomies) iocs.push({ type: 'BEHAVIOR', value: alert.cortex_taxonomies });
+    const ip = this.pickFirstString([alert.src_ip]);
+    const mitre = this.pickFirstString([alert.mitre_ids]);
+    const taxonomy = this.pickFirstString([alert.cortex_taxonomies]);
+    const vtTags = this.pickFirstString([alert.vt_tags]);
+
+    if (ip) iocs.push({ type: 'IP', value: ip });
+    if (mitre) iocs.push({ type: 'BEHAVIOR', value: `MITRE ${mitre}` });
+    if (taxonomy) iocs.push({ type: 'BEHAVIOR', value: taxonomy });
+    if (vtTags) iocs.push({ type: 'BEHAVIOR', value: `VT Tags: ${vtTags}` });
     return iocs;
   }
 
@@ -255,5 +323,75 @@ export class IncidentsService {
         severity: (alert.vt_malicious ?? 0) > 0 ? 'CRITICAL' : (alert.rule_level ?? 0) >= 8 ? 'WARN' : 'INFO',
       },
     ];
+  }
+
+  private parseUnknownDate(value: unknown): Date | null {
+    if (value === null || value === undefined) return null;
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value;
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const ms = value > 1e12 ? value : value * 1000;
+      const date = new Date(ms);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed || trimmed.toLowerCase() === 'nan') return null;
+
+      if (/^\d+$/.test(trimmed)) {
+        const asNum = Number(trimmed);
+        if (Number.isFinite(asNum)) {
+          const ms = asNum > 1e12 ? asNum : asNum * 1000;
+          const numericDate = new Date(ms);
+          if (!Number.isNaN(numericDate.getTime())) return numericDate;
+        }
+      }
+
+      const parsed = new Date(trimmed);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    if (typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+      if (obj['$date']) {
+        return this.parseUnknownDate(obj['$date']);
+      }
+    }
+
+    return null;
+  }
+
+  private parseObjectIdDate(id: string): Date | null {
+    const normalized = String(id || '').trim();
+    if (!/^[a-fA-F0-9]{24}$/.test(normalized)) return null;
+
+    const seconds = Number.parseInt(normalized.slice(0, 8), 16);
+    if (!Number.isFinite(seconds)) return null;
+
+    const date = new Date(seconds * 1000);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private pickFirstString(values: Array<unknown>): string {
+    for (const value of values) {
+      const cleaned = this.cleanString(value);
+      if (cleaned) return cleaned;
+    }
+    return '';
+  }
+
+  private cleanString(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    const str = String(value).trim();
+    if (!str) return '';
+    const normalized = str.toLowerCase();
+    if (normalized === 'nan' || normalized === 'null' || normalized === 'undefined' || normalized === '-') {
+      return '';
+    }
+    return str;
   }
 }

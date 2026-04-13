@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { AiScore, ThreatFeatures, ModelMetrics, ScoreDistribution } from '../models/ai-score.model';
+import { AiScore, ThreatFeatures, ModelMetrics, ScoreDistribution, PipelineSummary } from '../models/ai-score.model';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
@@ -12,7 +12,12 @@ export class AiScoringService {
 
   calculateScore(features: ThreatFeatures): Observable<AiScore> {
     return this.http.post<AiScore>(`${this.base}/ai/score`, features).pipe(
-      catchError(() => of(this.mockCalculate(features)))
+      catchError(() => of({
+        score: 0,
+        decision: 'MONITOR' as const,
+        confidence: 0,
+        featureContributions: []
+      } as AiScore))
     );
   }
 
@@ -34,32 +39,44 @@ export class AiScoringService {
   }
 
   getScoreDistribution(): Observable<ScoreDistribution> {
-    return this.http.get<any>('/assets/mock/ai-model-metrics.json').pipe(
-      catchError(() => of({ bins: [], timeline: [] }))
+    return this.http.get<any>(`${this.base}/ai/score-distribution`).pipe(
+      catchError(() => this.http.get<any>('/assets/mock/ai-model-metrics.json').pipe(
+        catchError(() => of({ bins: [], timeline: [] }))
+      ))
     );
   }
 
-  private mockCalculate(f: ThreatFeatures): AiScore {
-    const isRansomware = ['Ransomware', 'Exfiltration', 'Malware'].includes(f.threatType);
-    const isCriticalAsset = ['Patient DB', 'EHR', 'Emergency Workstation', 'IoMT'].includes(f.assetType);
-    const threatPts = isRansomware ? 30 : f.threatType === 'Credentials' ? 15 : 5;
-    const assetPts = isCriticalAsset ? 20 : 5;
-    const iocPts = f.iocPresence ? 15 : 0;
-    const severityPts = f.alertSeverity * 8;
-    const histPts = Math.min(f.historicalIncidents * 0.5, 10);
-    const confPts = 3;
-    const score = Math.min(Math.round(threatPts + assetPts + iocPts + severityPts + histPts + confPts), 100);
-    const decision: 'MONITOR' | 'ESCALATE' | 'ISOLATE' = score < 40 ? 'MONITOR' : score <= 70 ? 'ESCALATE' : 'ISOLATE';
-    const confidence = Math.min(75 + Math.floor(Math.random() * 20), 99);
-    return {
-      score, decision, confidence,
-      featureContributions: [
-        { feature: 'Threat Type', points: threatPts, weight: 35 },
-        { feature: 'Asset Type', points: assetPts, weight: 28 },
-        { feature: 'IOC Presence', points: iocPts, weight: 18 },
-        { feature: 'Alert Severity', points: severityPts, weight: 12 },
-        { feature: 'Historical Data', points: Math.round(histPts), weight: 7 }
-      ]
-    };
+  getPipelineSummary(): Observable<PipelineSummary> {
+    return this.http.get<PipelineSummary>(`${this.base}/ai/pipeline-summary`).pipe(
+      catchError(() => of({
+        generatedAt: null,
+        modelType: 'RandomForestRegressor',
+        modelSource: 'pre-trained',
+        metrics: {
+          modelAccuracy: 0,
+          falsePositiveRate: 0,
+          precisionCritical: 0,
+          mae: 0,
+          r2Score: 0,
+        },
+        statistics: {
+          totalAlerts: 0,
+          avgMttdMinutes: 0,
+          avgMttrMinutes: 0,
+          avgAiScore: 0,
+          decisionDistribution: {
+            ISOLATE: 0,
+            ESCALATE: 0,
+            INVESTIGATE: 0,
+            MONITOR: 0,
+          },
+        },
+        trainingDataset: {
+          realRows: 0,
+          syntheticRows: 0,
+          totalRows: 0,
+        },
+      }))
+    );
   }
 }
