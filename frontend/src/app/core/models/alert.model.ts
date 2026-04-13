@@ -45,6 +45,8 @@ export interface AlertItem {
   misp?: string;
   misp_ioc?: string;
   misp_event_id?: string;
+  alert_status_updated_at?: string;
+  alert_status_history?: Array<{ status?: string; changed_at?: string }>;
   alert_status?: 'OPEN' | 'INVESTIGATING' | 'CLOSED';
 
   severity?: string;

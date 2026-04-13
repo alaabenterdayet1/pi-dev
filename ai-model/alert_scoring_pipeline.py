@@ -29,8 +29,9 @@ import numpy as np
 import pandas as pd
 from bson import ObjectId
 from pymongo import MongoClient
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
+from sklearn.metrics import accuracy_score, mean_absolute_error, precision_score, r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
 
 
@@ -47,6 +48,8 @@ class PipelineConfig:
     synthetic_size: int
     seed: int
     write_back: bool
+    retrain_classifier: bool
+    classifier_model_output: Path
 
 
 def parse_args() -> PipelineConfig:
@@ -81,6 +84,16 @@ def parse_args() -> PipelineConfig:
         action="store_true",
         help="Write ai scoring and recommendation fields back into MongoDB",
     )
+    parser.add_argument(
+        "--retrain-classifier",
+        action="store_true",
+        help="Train a severity classifier on the augmented dataset and use it for scoring",
+    )
+    parser.add_argument(
+        "--classifier-model-output",
+        default="ai-model/siem_scoring_model_retrained.pkl",
+        help="Where to save retrained classifier model",
+    )
     args = parser.parse_args()
 
     mongo_uri = args.mongo_uri
@@ -108,6 +121,8 @@ def parse_args() -> PipelineConfig:
         synthetic_size=max(1, int(args.synthetic_size)),
         seed=int(args.seed),
         write_back=args.write_back,
+        retrain_classifier=args.retrain_classifier,
+        classifier_model_output=Path(args.classifier_model_output),
     )
 
 
@@ -544,6 +559,63 @@ def severity_to_numeric(value: object) -> int:
     return mapping.get(normalize_severity_label(value), 10)
 
 
+def severity_label_to_score(label: str) -> int:
+    mapping = {
+        "informational": 18,
+        "low": 28,
+        "medium": 52,
+        "high": 72,
+        "critical": 92,
+    }
+    return mapping.get(normalize_severity_label(label), 18)
+
+
+def train_classifier_model(
+    x: pd.DataFrame,
+    y_labels: pd.Series,
+    seed: int,
+) -> Tuple[RandomForestClassifier, Dict[str, float], np.ndarray]:
+    """Train a severity classifier and return holdout metrics + full-dataset predictions."""
+    y = y_labels.astype(str).map(normalize_severity_label)
+
+    x_train, x_test, y_train, y_test = train_test_split(
+        x,
+        y,
+        test_size=0.2,
+        random_state=seed,
+        stratify=y,
+    )
+
+    clf = RandomForestClassifier(
+        n_estimators=450,
+        max_depth=18,
+        min_samples_leaf=2,
+        class_weight="balanced_subsample",
+        random_state=seed,
+        n_jobs=-1,
+    )
+    clf.fit(x_train, y_train)
+
+    y_test_pred = clf.predict(x_test)
+    holdout_accuracy = accuracy_score(y_test, y_test_pred)
+
+    predicted_positive = np.isin(y_test_pred, ["high", "critical"]).sum()
+    fp = np.logical_and(np.isin(y_test_pred, ["high", "critical"]), np.isin(y_test, ["informational", "low"])).sum()
+    fpr = (fp / predicted_positive) if predicted_positive else 0.0
+
+    precision_critical = precision_score(y_test, y_test_pred, labels=["critical"], average="macro", zero_division=0)
+
+    y_all_pred_labels = clf.predict(x)
+    y_all_pred_scores = np.array([severity_label_to_score(label) for label in y_all_pred_labels], dtype=float)
+
+    metrics = {
+        "model_accuracy": round(float(np.clip(holdout_accuracy, 0.0, 1.0)), 4),
+        "false_positive_rate": round(float(np.clip(fpr, 0.0, 1.0)), 4),
+        "precision_critical": round(float(np.clip(precision_critical, 0.0, 1.0)), 4),
+    }
+    return clf, metrics, y_all_pred_scores
+
+
 def compute_dynamic_metrics(df: pd.DataFrame, scores: np.ndarray) -> Dict[str, float]:
     if df.empty or scores.size == 0:
         return {
@@ -817,32 +889,44 @@ def main() -> None:
     # Build features
     x = build_features(df_augmented)
     print(f"Features built: {x.shape[1]} columns")
-    
-    # Try to load pre-trained model
-    model, metrics = load_pretrained_model()
-    
-    # If pre-trained model loaded successfully
-    if model is not None:
-        print("Using pre-trained Random Forest model for scoring")
-        predictions = model.predict(x)
-        predictions = np.clip(predictions, 0, 100)  # Ensure 0-100 range
+
+    trained_metrics: Dict[str, float] = {}
+    model_source = "pre-trained"
+
+    if config.retrain_classifier:
+        print("Training supervised severity classifier...")
+        clf, trained_metrics, predictions = train_classifier_model(
+            x,
+            df_augmented["iris_severity_name"],
+            config.seed,
+        )
+        model_source = "retrained-classifier"
+        config.classifier_model_output.parent.mkdir(parents=True, exist_ok=True)
+        with open(config.classifier_model_output, "wb") as f:
+            pickle.dump(clf, f)
+        print(f"Retrained classifier saved to: {config.classifier_model_output}")
     else:
-        print("Pre-trained model not available. Using heuristic fallback.")
-        # Heuristic fallback: calculate scores based on alert severity and VT results
-        predictions = np.zeros(len(x))
-        for idx, row_data in x.iterrows():
-            score = 20  # base score
-            for col in ["vt_malicious", "vt_suspicious"]:
-                if col in x.columns:
-                    score += float(row_data.get(col, 0)) * 3
-            score = min(100, score)
-            predictions[idx] = score
-        
-        metrics = {
-            "model_accuracy": 0.70,
-            "false_positive_rate": 0.15,
-            "precision_critical": 0.65,
-        }
+        # Try to load pre-trained model
+        model, _ = load_pretrained_model()
+    
+        # If pre-trained model loaded successfully
+        if model is not None:
+            print("Using pre-trained Random Forest model for scoring")
+            predictions = model.predict(x)
+            predictions = np.clip(predictions, 0, 100)  # Ensure 0-100 range
+            model_source = "pre-trained"
+        else:
+            print("Pre-trained model not available. Using heuristic fallback.")
+            # Heuristic fallback: calculate scores based on alert severity and VT results
+            predictions = np.zeros(len(x))
+            for idx, row_data in x.iterrows():
+                score = 20  # base score
+                for col in ["vt_malicious", "vt_suspicious"]:
+                    if col in x.columns:
+                        score += float(row_data.get(col, 0)) * 3
+                score = min(100, score)
+                predictions[idx] = score
+            model_source = "fallback"
 
     # Score real alerts only (first N rows)
     real_count = len(df_raw)
@@ -853,12 +937,15 @@ def main() -> None:
     statistics = build_statistics(df_real, scored_alerts)
 
     metrics = compute_dynamic_metrics(df_augmented, predictions)
+    for key in ("model_accuracy", "false_positive_rate", "precision_critical"):
+        if key in trained_metrics:
+            metrics[key] = trained_metrics[key]
 
     report = {
         "metadata": {
             "generated_at": datetime.now().isoformat(),
             "model_type": "RandomForestRegressor",
-            "model_source": "pre-trained" if model is not None else "fallback",
+            "model_source": model_source,
         },
         "metrics": metrics,
         "training_dataset": {

@@ -157,7 +157,29 @@ export class IncidentsComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
 
+      const changedAt = result.updatedAt || new Date().toISOString();
+      incident.timeline = [
+        {
+          timestamp: changedAt,
+          event: `Status changed to ${status}`,
+          severity: 'INFO',
+        },
+        ...(incident.timeline || []),
+      ];
+
+      if (this.selectedIncident?.id === incident.id) {
+        this.selectedIncident.timeline = [
+          {
+            timestamp: changedAt,
+            event: `Status changed to ${status}`,
+            severity: 'INFO',
+          },
+          ...(this.selectedIncident.timeline || []),
+        ];
+      }
+
       this.snack.open(`Statut mis a jour: ${status}`, '✓', { panelClass: 'toast-success' });
+      this.cdr.markForCheck();
     });
   }
 

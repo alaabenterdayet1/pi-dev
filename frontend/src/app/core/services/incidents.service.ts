@@ -86,9 +86,14 @@ export class IncidentsService {
     ).pipe(catchError(() => of({ success: true })));
   }
 
-  updateIncidentStatus(id: string, status: Incident['status']): Observable<{ success: boolean }> {
-    return this.http.patch<{ message: string }>(`${this.base}/alerts/${id}/status`, { status }).pipe(
-      map(() => ({ success: true })),
+  updateIncidentStatus(id: string, status: Incident['status']): Observable<{ success: boolean; updatedAt?: string }> {
+    return this.http.patch<{ message: string; data?: Record<string, unknown> }>(`${this.base}/alerts/${id}/status`, { status }).pipe(
+      map((res) => ({
+        success: true,
+        updatedAt: typeof res?.data?.['alert_status_updated_at'] === 'string'
+          ? String(res.data['alert_status_updated_at'])
+          : undefined,
+      })),
       catchError(() => of({ success: false }))
     );
   }
@@ -316,13 +321,33 @@ export class IncidentsService {
   }
 
   private toTimeline(alert: AlertItem): Incident['timeline'] {
-    return [
+    const timeline: Incident['timeline'] = [
       {
         timestamp: this.toDetectedAt(alert),
         event: alert.iris_alert_title || alert.rule_description || 'Alert generated',
         severity: (alert.vt_malicious ?? 0) > 0 ? 'CRITICAL' : (alert.rule_level ?? 0) >= 8 ? 'WARN' : 'INFO',
       },
     ];
+
+    const statusHistory = Array.isArray(alert.alert_status_history) ? alert.alert_status_history : [];
+    for (const item of statusHistory) {
+      if (!item || !item.changed_at || !item.status) continue;
+      timeline.push({
+        timestamp: String(item.changed_at),
+        event: `Status changed to ${String(item.status).toUpperCase()}`,
+        severity: 'INFO',
+      });
+    }
+
+    if (alert.alert_status_updated_at && alert.alert_status) {
+      timeline.push({
+        timestamp: String(alert.alert_status_updated_at),
+        event: `Status updated: ${String(alert.alert_status).toUpperCase()}`,
+        severity: 'INFO',
+      });
+    }
+
+    return timeline;
   }
 
   private parseUnknownDate(value: unknown): Date | null {

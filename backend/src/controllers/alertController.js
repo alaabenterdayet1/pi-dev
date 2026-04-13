@@ -87,9 +87,21 @@ const updateAlertStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status. Use OPEN, INVESTIGATING, or CLOSED.' });
     }
 
+    const changedAt = new Date().toISOString();
     const updated = await Alert.findByIdAndUpdate(
       req.params.id,
-      { $set: { alert_status: nextStatus } },
+      {
+        $set: {
+          alert_status: nextStatus,
+          alert_status_updated_at: changedAt,
+        },
+        $push: {
+          alert_status_history: {
+            status: nextStatus,
+            changed_at: changedAt,
+          },
+        },
+      },
       { new: true }
     );
 
